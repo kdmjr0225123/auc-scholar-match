@@ -1,8 +1,25 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { GraduationCap, Search, Award, ArrowRight } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { GraduationCap, Search, Award, ArrowRight, Sun, Moon } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 export default function Landing() {
+  const [isDark, setIsDark] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return document.documentElement.classList.contains('dark');
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDark]);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -13,6 +30,11 @@ export default function Landing() {
             <span className="font-display text-2xl font-bold text-primary">Elevaid</span>
           </div>
           <nav className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Sun className="h-4 w-4 text-muted-foreground" />
+              <Switch checked={isDark} onCheckedChange={setIsDark} />
+              <Moon className="h-4 w-4 text-muted-foreground" />
+            </div>
             <Link to="/auth">
               <Button variant="ghost">Sign In</Button>
             </Link>
