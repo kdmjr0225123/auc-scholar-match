@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { School } from '@/types/database';
@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { GraduationCap, Loader2, Upload } from 'lucide-react';
+import { GraduationCap, Loader2, Upload, ArrowLeft } from 'lucide-react';
 
 const SCHOOLS: { value: School; label: string }[] = [
   { value: 'morehouse', label: 'Morehouse College' },
@@ -164,6 +164,11 @@ export default function ProfileSetup() {
   return (
     <div className="min-h-screen bg-background py-12 px-4">
       <div className="max-w-md mx-auto">
+        <Link to="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary mb-6 transition-colors">
+          <ArrowLeft className="h-4 w-4" />
+          Back to Home
+        </Link>
+        
         <div className="flex items-center justify-center gap-2 mb-8">
           <GraduationCap className="h-10 w-10 text-accent" />
           <span className="font-display text-3xl font-bold text-primary">Elevaid</span>
