@@ -12,7 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { 
-  GraduationCap, Loader2, Plus, Pencil, Trash2, ArrowLeft, Save, X 
+  GraduationCap, Loader2, Plus, Pencil, Trash2, ArrowLeft, Save, X, Search 
 } from 'lucide-react';
 import {
   Dialog,
@@ -22,6 +22,20 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
+import { MAJORS } from '@/constants/majors';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 
 const SCHOOLS: { value: School; label: string }[] = [
   { value: 'morehouse', label: 'Morehouse' },
@@ -57,7 +71,7 @@ export default function Admin() {
     min_gpa: '',
     max_gpa: '',
     eligible_schools: [] as School[],
-    eligible_majors: '',
+    eligible_majors: [] as string[],
     graduation_year_min: '',
     graduation_year_max: '',
     keywords: '',
@@ -116,7 +130,7 @@ export default function Admin() {
       min_gpa: '',
       max_gpa: '',
       eligible_schools: [],
-      eligible_majors: '',
+      eligible_majors: [],
       graduation_year_min: '',
       graduation_year_max: '',
       keywords: '',
@@ -137,7 +151,7 @@ export default function Admin() {
       min_gpa: rules?.min_gpa?.toString() || '',
       max_gpa: rules?.max_gpa?.toString() || '',
       eligible_schools: (rules?.eligible_schools as School[]) || [],
-      eligible_majors: rules?.eligible_majors?.join(', ') || '',
+      eligible_majors: rules?.eligible_majors || [],
       graduation_year_min: rules?.graduation_year_min?.toString() || '',
       graduation_year_max: rules?.graduation_year_max?.toString() || '',
       keywords: rules?.keywords?.join(', ') || '',
@@ -185,7 +199,7 @@ export default function Admin() {
         min_gpa: formData.min_gpa ? parseFloat(formData.min_gpa) : null,
         max_gpa: formData.max_gpa ? parseFloat(formData.max_gpa) : null,
         eligible_schools: formData.eligible_schools,
-        eligible_majors: formData.eligible_majors.split(',').map(s => s.trim()).filter(Boolean),
+        eligible_majors: formData.eligible_majors,
         graduation_year_min: formData.graduation_year_min ? parseInt(formData.graduation_year_min) : null,
         graduation_year_max: formData.graduation_year_max ? parseInt(formData.graduation_year_max) : null,
         keywords: formData.keywords.split(',').map(s => s.trim()).filter(Boolean),
@@ -431,12 +445,74 @@ export default function Admin() {
                 </div>
 
                 <div className="space-y-2 mt-4">
-                  <Label>Eligible Majors (comma-separated)</Label>
-                  <Input
-                    value={formData.eligible_majors}
-                    onChange={(e) => setFormData({ ...formData, eligible_majors: e.target.value })}
-                    placeholder="Computer Science, Engineering, Business"
-                  />
+                  <Label>Eligible Majors</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-between font-normal h-auto min-h-10"
+                      >
+                        <span className="text-left truncate">
+                          {formData.eligible_majors.length > 0 
+                            ? `${formData.eligible_majors.length} major(s) selected`
+                            : "Select eligible majors (all if none)"}
+                        </span>
+                        <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80 p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Search majors..." />
+                        <CommandList>
+                          <CommandEmpty>No major found.</CommandEmpty>
+                          <CommandGroup className="max-h-64 overflow-y-auto">
+                            {MAJORS.map((m) => (
+                              <CommandItem
+                                key={m}
+                                value={m}
+                                onSelect={() => {
+                                  if (formData.eligible_majors.includes(m)) {
+                                    setFormData({
+                                      ...formData,
+                                      eligible_majors: formData.eligible_majors.filter(maj => maj !== m),
+                                    });
+                                  } else {
+                                    setFormData({
+                                      ...formData,
+                                      eligible_majors: [...formData.eligible_majors, m],
+                                    });
+                                  }
+                                }}
+                              >
+                                <Checkbox
+                                  checked={formData.eligible_majors.includes(m)}
+                                  className="mr-2"
+                                />
+                                {m}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  {formData.eligible_majors.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {formData.eligible_majors.map((m) => (
+                        <Badge 
+                          key={m} 
+                          variant="secondary"
+                          className="cursor-pointer"
+                          onClick={() => setFormData({
+                            ...formData,
+                            eligible_majors: formData.eligible_majors.filter(maj => maj !== m),
+                          })}
+                        >
+                          {m} ×
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2 mt-4">

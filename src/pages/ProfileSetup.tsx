@@ -9,7 +9,21 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { GraduationCap, Loader2, Upload, ArrowLeft } from 'lucide-react';
+import { GraduationCap, Loader2, Upload, ArrowLeft, Search } from 'lucide-react';
+import { MAJORS } from '@/constants/majors';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 
 const SCHOOLS: { value: School; label: string }[] = [
   { value: 'morehouse', label: 'Morehouse College' },
@@ -32,6 +46,7 @@ export default function ProfileSetup() {
   const [graduationYear, setGraduationYear] = useState('');
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [existingProfile, setExistingProfile] = useState(false);
+  const [majorOpen, setMajorOpen] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -218,14 +233,41 @@ export default function ProfileSetup() {
 
               <div className="space-y-2">
                 <Label htmlFor="major">Major *</Label>
-                <Input
-                  id="major"
-                  type="text"
-                  placeholder="Computer Science"
-                  value={major}
-                  onChange={(e) => setMajor(e.target.value)}
-                  required
-                />
+                <Popover open={majorOpen} onOpenChange={setMajorOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={majorOpen}
+                      className="w-full justify-between font-normal"
+                    >
+                      {major || "Select your major"}
+                      <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search majors..." />
+                      <CommandList>
+                        <CommandEmpty>No major found.</CommandEmpty>
+                        <CommandGroup className="max-h-64 overflow-y-auto">
+                          {MAJORS.map((m) => (
+                            <CommandItem
+                              key={m}
+                              value={m}
+                              onSelect={() => {
+                                setMajor(m);
+                                setMajorOpen(false);
+                              }}
+                            >
+                              {m}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
 
               <div className="space-y-2">

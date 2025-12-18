@@ -92,68 +92,83 @@ export default function Dashboard() {
         if (!rules) return null;
 
         const matchReasons: string[] = [];
-        let totalPoints = 0;
-        let earnedPoints = 0;
+        const failReasons: string[] = [];
+        let totalCriteria = 0;
+        let metCriteria = 0;
 
         // School match - REQUIRED
+        totalCriteria++;
         const schoolMatch = rules.eligible_schools?.length === 0 || 
           rules.eligible_schools?.includes(profile.school);
-        if (!schoolMatch) return null;
-        matchReasons.push(`✓ AUC institution (${formatSchool(profile.school)})`);
+        if (!schoolMatch) {
+          return null; // Hard requirement
+        }
+        metCriteria++;
+        matchReasons.push(`✓ School: ${formatSchool(profile.school)} is eligible`);
 
         // Graduation year - REQUIRED
-        const yearMatch = 
+        totalCriteria++;
+        const yearInRange = 
           (!rules.graduation_year_min || profile.graduation_year >= rules.graduation_year_min) &&
           (!rules.graduation_year_max || profile.graduation_year <= rules.graduation_year_max);
-        if (!yearMatch) return null;
-        matchReasons.push(`✓ Graduation year ${profile.graduation_year}`);
+        if (!yearInRange) {
+          return null; // Hard requirement
+        }
+        metCriteria++;
+        if (rules.graduation_year_min && rules.graduation_year_max) {
+          matchReasons.push(`✓ Graduation Year: ${profile.graduation_year} is within ${rules.graduation_year_min}-${rules.graduation_year_max}`);
+        } else if (rules.graduation_year_min) {
+          matchReasons.push(`✓ Graduation Year: ${profile.graduation_year} ≥ ${rules.graduation_year_min}`);
+        } else if (rules.graduation_year_max) {
+          matchReasons.push(`✓ Graduation Year: ${profile.graduation_year} ≤ ${rules.graduation_year_max}`);
+        } else {
+          matchReasons.push(`✓ Graduation Year: ${profile.graduation_year} (no restriction)`);
+        }
 
         // GPA check
-        totalPoints += 30;
-        const gpaMatch = 
-          (!rules.min_gpa || profile.gpa >= rules.min_gpa) &&
-          (!rules.max_gpa || profile.gpa <= rules.max_gpa);
-        if (gpaMatch) {
-          earnedPoints += 30;
-          if (rules.min_gpa) {
-            matchReasons.push(`✓ GPA ≥ ${rules.min_gpa}`);
+        if (rules.min_gpa || rules.max_gpa) {
+          totalCriteria++;
+          const gpaMatch = 
+            (!rules.min_gpa || profile.gpa >= rules.min_gpa) &&
+            (!rules.max_gpa || profile.gpa <= rules.max_gpa);
+          if (gpaMatch) {
+            metCriteria++;
+            if (rules.min_gpa && rules.max_gpa) {
+              matchReasons.push(`✓ GPA: ${profile.gpa.toFixed(2)} is within ${rules.min_gpa}-${rules.max_gpa}`);
+            } else if (rules.min_gpa) {
+              matchReasons.push(`✓ GPA: ${profile.gpa.toFixed(2)} ≥ ${rules.min_gpa} minimum`);
+            } else {
+              matchReasons.push(`✓ GPA: ${profile.gpa.toFixed(2)} ≤ ${rules.max_gpa} maximum`);
+            }
+          } else {
+            if (rules.min_gpa && profile.gpa < rules.min_gpa) {
+              failReasons.push(`✗ GPA: ${profile.gpa.toFixed(2)} below ${rules.min_gpa} minimum`);
+            }
+            if (rules.max_gpa && profile.gpa > rules.max_gpa) {
+              failReasons.push(`✗ GPA: ${profile.gpa.toFixed(2)} above ${rules.max_gpa} maximum`);
+            }
           }
         }
 
-        // Major match
+        // Major match - exact match from structured list
         if (rules.eligible_majors?.length > 0) {
-          totalPoints += 25;
-          const majorMatch = rules.eligible_majors.some((m: string) => 
-            profile.major.toLowerCase().includes(m.toLowerCase()) ||
-            m.toLowerCase().includes(profile.major.toLowerCase())
-          );
+          totalCriteria++;
+          const majorMatch = rules.eligible_majors.includes(profile.major);
           if (majorMatch) {
-            earnedPoints += 25;
-            matchReasons.push(`✓ Major: ${profile.major}`);
+            metCriteria++;
+            matchReasons.push(`✓ Major: ${profile.major} is eligible`);
+          } else {
+            failReasons.push(`✗ Major: ${profile.major} not in eligible list`);
           }
         }
 
-        // Keyword match (bonus)
-        if (rules.keywords?.length > 0) {
-          totalPoints += 15;
-          const keywordMatch = rules.keywords.some((k: string) =>
-            profile.major.toLowerCase().includes(k.toLowerCase())
-          );
-          if (keywordMatch) {
-            earnedPoints += 15;
-            matchReasons.push(`✓ Relevant field of study`);
-          }
-        }
-
-        // Base score for meeting required criteria
-        const baseScore = 30;
-        const variableScore = totalPoints > 0 ? (earnedPoints / totalPoints) * 70 : 70;
-        const matchPercentage = Math.round(baseScore + variableScore);
+        // Calculate match percentage based on criteria met
+        const matchPercentage = Math.round((metCriteria / totalCriteria) * 100);
 
         return {
           ...scholarship,
           matchPercentage,
-          matchReasons,
+          matchReasons: [...matchReasons, ...failReasons],
           eligibilityRules: rules,
         } as MatchedScholarship;
       })
@@ -289,10 +304,15 @@ export default function Dashboard() {
                   </div>
 
                   <div className="mb-4">
-                    <p className="text-xs font-medium text-muted-foreground mb-2">Why you qualify:</p>
+                    <p className="text-xs font-medium text-muted-foreground mb-2">Eligibility breakdown:</p>
                     <ul className="text-xs space-y-1">
-                      {scholarship.matchReasons.slice(0, 4).map((reason, i) => (
-                        <li key={i} className="text-success">{reason}</li>
+                      {scholarship.matchReasons.map((reason, i) => (
+                        <li 
+                          key={i} 
+                          className={reason.startsWith('✓') ? 'text-success' : 'text-destructive'}
+                        >
+                          {reason}
+                        </li>
                       ))}
                     </ul>
                   </div>
@@ -304,10 +324,13 @@ export default function Dashboard() {
                       rel="noopener noreferrer"
                     >
                       <Button className="w-full" size="sm">
-                        Apply Now
+                        Apply on External Site
                         <ExternalLink className="h-4 w-4 ml-2" />
                       </Button>
                     </a>
+                    <p className="text-xs text-muted-foreground mt-2 text-center">
+                      Opens scholarship website in new tab
+                    </p>
                   </div>
                 </CardContent>
               </Card>
