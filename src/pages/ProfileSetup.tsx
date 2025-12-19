@@ -41,6 +41,9 @@ export default function ProfileSetup() {
   
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
   const [school, setSchool] = useState<School | ''>('');
   const [gpa, setGpa] = useState('');
   const [major, setMajor] = useState('');
@@ -67,10 +70,16 @@ export default function ProfileSetup() {
 
     if (data && !error) {
       setExistingProfile(true);
+      setFirstName(data.first_name || '');
+      setLastName(data.last_name || '');
+      setEmail(data.email || user.email || '');
       setSchool(data.school as School);
       setGpa(data.gpa.toString());
       setMajor(data.major);
       setGraduationYear(data.graduation_year.toString());
+    } else {
+      // Pre-fill email from auth user
+      setEmail(user.email || '');
     }
     setInitialLoading(false);
   };
@@ -108,7 +117,8 @@ export default function ProfileSetup() {
           return;
         }
 
-        const filePath = `${user.id}/resume.pdf`;
+        // Use standardized naming: resume_<user_id>.pdf
+        const filePath = `resume_${user.id}.pdf`;
         const { error: uploadError } = await supabase.storage
           .from('resumes')
           .upload(filePath, resumeFile, { upsert: true });
@@ -122,6 +132,9 @@ export default function ProfileSetup() {
 
       const profileData = {
         user_id: user.id,
+        first_name: firstName,
+        last_name: lastName,
+        email,
         school: school as School,
         gpa: gpaNum,
         major,
@@ -199,6 +212,41 @@ export default function ProfileSetup() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">First Name *</Label>
+                  <Input
+                    id="firstName"
+                    placeholder="John"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last Name *</Label>
+                  <Input
+                    id="lastName"
+                    placeholder="Doe"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email">Email *</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="john.doe@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="school">School *</Label>
                 <Select value={school} onValueChange={(v) => setSchool(v as School)}>
@@ -304,7 +352,7 @@ export default function ProfileSetup() {
                 )}
               </div>
 
-              <Button type="submit" className="w-full" disabled={loading || !school || !gpa || !major || !graduationYear}>
+              <Button type="submit" className="w-full" disabled={loading || !firstName || !lastName || !email || !school || !gpa || !major || !graduationYear}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {existingProfile ? 'Update Profile' : 'Complete Setup'}
               </Button>
