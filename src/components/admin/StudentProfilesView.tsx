@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, FileText, Mail, User, GraduationCap, BookOpen, Calendar } from 'lucide-react';
+import { Loader2, FileText, Mail, User, GraduationCap, BookOpen, Calendar, Clock, Hash } from 'lucide-react';
+import { format } from 'date-fns';
 
 interface StudentProfile {
   id: string;
@@ -18,6 +19,7 @@ interface StudentProfile {
   graduation_year: number;
   resume_url: string | null;
   created_at: string | null;
+  updated_at: string | null;
 }
 
 const SCHOOL_LABELS: Record<string, string> = {
@@ -59,7 +61,7 @@ export default function StudentProfilesView() {
   const getResumeUrl = async (resumePath: string) => {
     const { data } = await supabase.storage
       .from('resumes')
-      .createSignedUrl(resumePath, 3600); // 1 hour expiry
+      .createSignedUrl(resumePath, 3600);
     return data?.signedUrl;
   };
 
@@ -89,6 +91,11 @@ export default function StudentProfilesView() {
     return 'No name provided';
   };
 
+  const formatTimestamp = (timestamp: string | null) => {
+    if (!timestamp) return 'N/A';
+    return format(new Date(timestamp), 'MMM d, yyyy h:mm a');
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -112,62 +119,109 @@ export default function StudentProfilesView() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 lg:grid-cols-2">
           {profiles.map((profile) => (
             <Card key={profile.id} className="relative">
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
-                  <div>
+                  <div className="space-y-1">
                     <CardTitle className="flex items-center gap-2 text-lg">
                       <User className="h-4 w-4 text-accent" />
                       {getFullName(profile)}
                     </CardTitle>
                     {profile.email && (
-                      <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+                      <p className="text-sm text-muted-foreground flex items-center gap-1">
                         <Mail className="h-3 w-3" />
                         {profile.email}
                       </p>
                     )}
+                    <p className="text-xs text-muted-foreground flex items-center gap-1 font-mono">
+                      <Hash className="h-3 w-3" />
+                      {profile.user_id}
+                    </p>
                   </div>
                   {profile.resume_url && (
                     <Badge variant="secondary" className="text-xs">
-                      Resume
+                      Has Resume
                     </Badge>
                   )}
                 </div>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div className="flex items-center gap-1 text-muted-foreground">
-                    <GraduationCap className="h-3 w-3" />
-                    <span className="truncate">{SCHOOL_LABELS[profile.school] || profile.school}</span>
+              <CardContent className="space-y-4">
+                {/* Profile Filters Section */}
+                <div className="space-y-2">
+                  <h4 className="text-sm font-semibold text-foreground">Profile Filters (Used for Matching)</h4>
+                  <div className="grid grid-cols-2 gap-3 text-sm bg-muted/50 p-3 rounded-lg">
+                    <div className="space-y-1">
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <GraduationCap className="h-3 w-3" />
+                        School
+                      </span>
+                      <p className="font-medium truncate">{SCHOOL_LABELS[profile.school] || profile.school}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        Graduation Year
+                      </span>
+                      <p className="font-medium">{profile.graduation_year}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-xs text-muted-foreground">GPA</span>
+                      <p className="font-medium">{profile.gpa.toFixed(1)}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <BookOpen className="h-3 w-3" />
+                        Major
+                      </span>
+                      <p className="font-medium truncate">{profile.major}</p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1 text-muted-foreground">
-                    <Calendar className="h-3 w-3" />
-                    <span>Class of {profile.graduation_year}</span>
+                </div>
+
+                {/* Timestamps Section */}
+                <div className="space-y-2">
+                  <h4 className="text-sm font-semibold text-foreground">Timestamps</h4>
+                  <div className="grid grid-cols-2 gap-3 text-xs bg-muted/30 p-3 rounded-lg">
+                    <div className="space-y-1">
+                      <span className="text-muted-foreground flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        Created
+                      </span>
+                      <p className="font-medium">{formatTimestamp(profile.created_at)}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-muted-foreground flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        Last Updated
+                      </span>
+                      <p className="font-medium">{formatTimestamp(profile.updated_at)}</p>
+                    </div>
                   </div>
                 </div>
-                
-                <div className="flex items-center gap-2 text-sm">
-                  <BookOpen className="h-3 w-3 text-muted-foreground" />
-                  <span className="truncate">{profile.major}</span>
-                </div>
-                
-                <div className="flex items-center justify-between pt-2 border-t border-border">
-                  <Badge variant="outline">GPA: {profile.gpa.toFixed(2)}</Badge>
-                  
-                  {profile.resume_url && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDownloadResume(profile)}
-                      className="text-accent hover:text-accent/80"
-                    >
-                      <FileText className="h-4 w-4 mr-1" />
-                      View Resume
-                    </Button>
-                  )}
-                </div>
+
+                {/* Resume Section */}
+                {profile.resume_url && (
+                  <div className="pt-2 border-t border-border">
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs text-muted-foreground">
+                        <p className="font-medium text-foreground mb-1">Resume Available</p>
+                        <p>{getFullName(profile)} • {profile.email || 'No email'}</p>
+                        <p className="font-mono text-[10px]">{profile.user_id}</p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDownloadResume(profile)}
+                        className="text-accent hover:text-accent/80"
+                      >
+                        <FileText className="h-4 w-4 mr-1" />
+                        Download
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}
