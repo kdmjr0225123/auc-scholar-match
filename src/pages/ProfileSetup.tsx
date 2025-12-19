@@ -35,11 +35,12 @@ const SCHOOLS: { value: School; label: string }[] = [
 const GRADUATION_YEARS = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() + i);
 
 export default function ProfileSetup() {
-  const { user, loading: authLoading } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [school, setSchool] = useState<School | ''>('');
   const [gpa, setGpa] = useState('');
   const [major, setMajor] = useState('');
@@ -49,16 +50,11 @@ export default function ProfileSetup() {
   const [majorOpen, setMajorOpen] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      navigate('/auth');
-    }
-  }, [user, authLoading, navigate]);
-
-  useEffect(() => {
     if (user) {
       loadExistingProfile();
     }
   }, [user]);
+
 
   const loadExistingProfile = async () => {
     if (!user) return;
@@ -76,7 +72,9 @@ export default function ProfileSetup() {
       setMajor(data.major);
       setGraduationYear(data.graduation_year.toString());
     }
+    setInitialLoading(false);
   };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -168,13 +166,14 @@ export default function ProfileSetup() {
     }
   };
 
-  if (authLoading) {
+  if (initialLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-accent" />
       </div>
     );
   }
+
 
   return (
     <div className="min-h-screen bg-background py-12 px-4">
