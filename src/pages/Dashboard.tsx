@@ -17,7 +17,7 @@ interface MatchedScholarship extends Scholarship {
 }
 
 export default function Dashboard() {
-  const { user, loading: authLoading, signOut, userRole } = useAuth();
+  const { user, signOut, userRole } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -26,16 +26,11 @@ export default function Dashboard() {
   const [matchedScholarships, setMatchedScholarships] = useState<MatchedScholarship[]>([]);
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      navigate('/auth');
-    }
-  }, [user, authLoading, navigate]);
-
-  useEffect(() => {
     if (user) {
       loadData();
     }
   }, [user]);
+
 
   const loadData = async () => {
     if (!user) return;
@@ -191,13 +186,14 @@ export default function Dashboard() {
     navigate('/');
   };
 
-  if (authLoading || loading) {
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-accent" />
       </div>
     );
   }
+
 
   return (
     <div className="min-h-screen bg-background">

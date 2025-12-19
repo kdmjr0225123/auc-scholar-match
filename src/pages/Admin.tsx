@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Scholarship, EligibilityRule, School } from '@/types/database';
 import { Button } from '@/components/ui/button';
@@ -49,9 +48,10 @@ interface ScholarshipWithRules extends Scholarship {
 }
 
 export default function Admin() {
-  const { user, loading: authLoading, userRole } = useAuth();
-  const navigate = useNavigate();
   const { toast } = useToast();
+
+
+
 
   const [loading, setLoading] = useState(true);
   const [scholarships, setScholarships] = useState<ScholarshipWithRules[]>([]);
@@ -78,25 +78,9 @@ export default function Admin() {
   });
 
   useEffect(() => {
-    if (!authLoading) {
-      if (!user) {
-        navigate('/auth');
-      } else if (userRole !== 'admin') {
-        toast({
-          variant: 'destructive',
-          title: 'Access denied',
-          description: 'You do not have admin permissions.',
-        });
-        navigate('/dashboard');
-      }
-    }
-  }, [user, authLoading, userRole, navigate]);
+    loadScholarships();
+  }, []);
 
-  useEffect(() => {
-    if (userRole === 'admin') {
-      loadScholarships();
-    }
-  }, [userRole]);
 
   const loadScholarships = async () => {
     try {
@@ -268,13 +252,14 @@ export default function Admin() {
     }
   };
 
-  if (authLoading || (loading && userRole === 'admin')) {
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-accent" />
       </div>
     );
   }
+
 
   return (
     <div className="min-h-screen bg-background">
