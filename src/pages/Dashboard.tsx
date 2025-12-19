@@ -111,7 +111,7 @@ export default function Dashboard() {
         }
         metCriteria++;
         if (rules.graduation_year_min && rules.graduation_year_max) {
-          matchReasons.push(`✓ Graduation Year: ${profile.graduation_year} is within ${rules.graduation_year_min}-${rules.graduation_year_max}`);
+          matchReasons.push(`✓ Graduation Year: ${profile.graduation_year} is within ${rules.graduation_year_min}–${rules.graduation_year_max}`);
         } else if (rules.graduation_year_min) {
           matchReasons.push(`✓ Graduation Year: ${profile.graduation_year} ≥ ${rules.graduation_year_min}`);
         } else if (rules.graduation_year_max) {
@@ -129,18 +129,18 @@ export default function Dashboard() {
           if (gpaMatch) {
             metCriteria++;
             if (rules.min_gpa && rules.max_gpa) {
-              matchReasons.push(`✓ GPA: ${profile.gpa.toFixed(2)} is within ${rules.min_gpa}-${rules.max_gpa}`);
+              matchReasons.push(`✓ GPA: ${profile.gpa.toFixed(1)} is within ${rules.min_gpa.toFixed(1)}–${rules.max_gpa.toFixed(1)}`);
             } else if (rules.min_gpa) {
-              matchReasons.push(`✓ GPA: ${profile.gpa.toFixed(2)} ≥ ${rules.min_gpa} minimum`);
+              matchReasons.push(`✓ GPA: ${profile.gpa.toFixed(1)} ≥ ${rules.min_gpa.toFixed(1)} minimum`);
             } else {
-              matchReasons.push(`✓ GPA: ${profile.gpa.toFixed(2)} ≤ ${rules.max_gpa} maximum`);
+              matchReasons.push(`✓ GPA: ${profile.gpa.toFixed(1)} ≤ ${rules.max_gpa!.toFixed(1)} maximum`);
             }
           } else {
             if (rules.min_gpa && profile.gpa < rules.min_gpa) {
-              failReasons.push(`✗ GPA: ${profile.gpa.toFixed(2)} below ${rules.min_gpa} minimum`);
+              failReasons.push(`✗ GPA: ${profile.gpa.toFixed(1)} below ${rules.min_gpa.toFixed(1)} minimum`);
             }
             if (rules.max_gpa && profile.gpa > rules.max_gpa) {
-              failReasons.push(`✗ GPA: ${profile.gpa.toFixed(2)} above ${rules.max_gpa} maximum`);
+              failReasons.push(`✗ GPA: ${profile.gpa.toFixed(1)} above ${rules.max_gpa.toFixed(1)} maximum`);
             }
           }
         }
