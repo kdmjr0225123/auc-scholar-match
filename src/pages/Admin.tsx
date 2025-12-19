@@ -11,7 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { 
-  GraduationCap, Loader2, Plus, Pencil, Trash2, ArrowLeft, Save, X, Search 
+  GraduationCap, Loader2, Plus, Pencil, Trash2, ArrowLeft, Save, X, Search, Users
 } from 'lucide-react';
 import {
   Dialog,
@@ -35,6 +35,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import StudentProfilesView from '@/components/admin/StudentProfilesView';
 
 const SCHOOLS: { value: School; label: string }[] = [
   { value: 'morehouse', label: 'Morehouse' },
@@ -533,56 +535,76 @@ export default function Admin() {
           </DialogContent>
         </Dialog>
 
-        {/* Scholarships List */}
-        <div className="space-y-4">
-          {scholarships.length === 0 ? (
-            <Card className="text-center py-12">
-              <CardContent>
-                <p className="text-muted-foreground">No scholarships yet. Create your first one!</p>
-              </CardContent>
-            </Card>
-          ) : (
-            scholarships.map((scholarship) => (
-              <Card key={scholarship.id}>
-                <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="font-display text-lg flex items-center gap-2">
-                        {scholarship.name}
-                        <Badge variant={scholarship.is_active ? 'default' : 'secondary'}>
-                          {scholarship.is_active ? 'Active' : 'Inactive'}
-                        </Badge>
-                      </CardTitle>
-                      <p className="text-sm text-muted-foreground">{scholarship.provider}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        checked={scholarship.is_active}
-                        onCheckedChange={() => toggleActive(scholarship.id, scholarship.is_active)}
-                      />
-                      <Button size="sm" variant="ghost" onClick={() => handleEdit(scholarship)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => handleDelete(scholarship.id)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-2">{scholarship.description}</p>
-                  <div className="flex flex-wrap gap-2 text-sm">
-                    <Badge variant="outline">${scholarship.award_amount.toLocaleString()}</Badge>
-                    <Badge variant="outline">Deadline: {new Date(scholarship.deadline).toLocaleDateString()}</Badge>
-                    {scholarship.eligibility_rules?.min_gpa && (
-                      <Badge variant="outline">Min GPA: {scholarship.eligibility_rules.min_gpa}</Badge>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </div>
+        {/* Tabs for Scholarships and Student Profiles */}
+        <Tabs defaultValue="scholarships" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="scholarships" className="flex items-center gap-2">
+              <GraduationCap className="h-4 w-4" />
+              Scholarships
+            </TabsTrigger>
+            <TabsTrigger value="students" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Student Profiles
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="scholarships">
+            {/* Scholarships List */}
+            <div className="space-y-4">
+              {scholarships.length === 0 ? (
+                <Card className="text-center py-12">
+                  <CardContent>
+                    <p className="text-muted-foreground">No scholarships yet. Create your first one!</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                scholarships.map((scholarship) => (
+                  <Card key={scholarship.id}>
+                    <CardHeader className="pb-2">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <CardTitle className="font-display text-lg flex items-center gap-2">
+                            {scholarship.name}
+                            <Badge variant={scholarship.is_active ? 'default' : 'secondary'}>
+                              {scholarship.is_active ? 'Active' : 'Inactive'}
+                            </Badge>
+                          </CardTitle>
+                          <p className="text-sm text-muted-foreground">{scholarship.provider}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={scholarship.is_active}
+                            onCheckedChange={() => toggleActive(scholarship.id, scholarship.is_active)}
+                          />
+                          <Button size="sm" variant="ghost" onClick={() => handleEdit(scholarship)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => handleDelete(scholarship.id)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground mb-2">{scholarship.description}</p>
+                      <div className="flex flex-wrap gap-2 text-sm">
+                        <Badge variant="outline">${scholarship.award_amount.toLocaleString()}</Badge>
+                        <Badge variant="outline">Deadline: {new Date(scholarship.deadline).toLocaleDateString()}</Badge>
+                        {scholarship.eligibility_rules?.min_gpa && (
+                          <Badge variant="outline">Min GPA: {scholarship.eligibility_rules.min_gpa}</Badge>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="students">
+            <StudentProfilesView />
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );

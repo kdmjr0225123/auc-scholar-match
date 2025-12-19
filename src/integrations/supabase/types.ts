@@ -106,9 +106,12 @@ export type Database = {
       student_profiles: {
         Row: {
           created_at: string | null
+          email: string | null
+          first_name: string | null
           gpa: number
           graduation_year: number
           id: string
+          last_name: string | null
           major: string
           resume_url: string | null
           school: Database["public"]["Enums"]["school"]
@@ -117,9 +120,12 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          email?: string | null
+          first_name?: string | null
           gpa: number
           graduation_year: number
           id?: string
+          last_name?: string | null
           major: string
           resume_url?: string | null
           school: Database["public"]["Enums"]["school"]
@@ -128,9 +134,12 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          email?: string | null
+          first_name?: string | null
           gpa?: number
           graduation_year?: number
           id?: string
+          last_name?: string | null
           major?: string
           resume_url?: string | null
           school?: Database["public"]["Enums"]["school"]
