@@ -54,7 +54,8 @@ export default function Landing() {
               For AUC Students
             </div>
             <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-primary mb-6 leading-tight">
-              Find Scholarships That <span className="text-accent">Match You</span>
+              Find Scholarships That<br className="hidden sm:block" />
+              <span className="text-accent"> Match You</span>
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
               Elevaid matches students from Morehouse, Spelman, Clark Atlanta, and Morris Brown 
