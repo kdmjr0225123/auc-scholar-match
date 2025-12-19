@@ -32,7 +32,7 @@ const SCHOOLS: { value: School; label: string }[] = [
   { value: 'morris_brown', label: 'Morris Brown College' },
 ];
 
-const GRADUATION_YEARS = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() + i);
+const GRADUATION_YEARS = [2026, 2027, 2028, 2029];
 
 export default function ProfileSetup() {
   const { user } = useAuth();
