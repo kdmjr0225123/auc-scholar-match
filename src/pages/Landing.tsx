@@ -89,20 +89,6 @@ const CARDS = [
       </div>
     )
   },
-  {
-    icon: '🔒',
-    label: 'More Matches',
-    color: 'rgba(255,255,255,0.04)',
-    locked: true,
-    content: (
-      <div style={{ opacity: 0.35 }}>
-        {[80, 55, 90, 65].map((w, i) => (
-          <div key={i} style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 4, height: 9, width: `${w}%`, marginBottom: '0.38rem' }} />
-        ))}
-        <div style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.15)', textAlign: 'center', marginTop: '0.6rem' }}>Sign up to unlock</div>
-      </div>
-    )
-  }
 ];
 
 const FEATURES = [
@@ -277,6 +263,7 @@ export default function Landing() {
           padding: 2.25rem 0 0;
           overflow-x: auto; scrollbar-width: none;
           max-width: 1100px; margin: 0 auto;
+          justify-content: center;
         }
         .e-strip::-webkit-scrollbar { display: none; }
         .e-pcard {
@@ -370,7 +357,7 @@ export default function Landing() {
 
         {/* NAV */}
         <nav className="e-nav">
-          <a className="e-logo" href="/">🎓 <em className="e-logo-em">Elev</em>aid</a>
+          <a className="e-logo" href="/">🎓 <span style={{whiteSpace:"nowrap"}}><em className="e-logo-em">Elev</em>aid</span></a>
           <div className="e-nav-r">
             <button className="btn-ghost-nav" onClick={go}>Sign In</button>
             <button className="btn-nav-cta" onClick={go}>Get Started →</button>
