@@ -1,365 +1,216 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { School } from '@/types/database';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { GraduationCap, Loader2, Upload, ArrowLeft, Search } from 'lucide-react';
-import { MAJORS } from '@/constants/majors';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
 
-const SCHOOLS: { value: School; label: string }[] = [
+const SCHOOLS = [
   { value: 'morehouse', label: 'Morehouse College' },
   { value: 'spelman', label: 'Spelman College' },
   { value: 'clark_atlanta', label: 'Clark Atlanta University' },
   { value: 'morris_brown', label: 'Morris Brown College' },
 ];
 
-const GRADUATION_YEARS = [2026, 2027, 2028, 2029];
+const MAJORS = [
+  'Computer Science', 'Business Administration', 'Biology', 'Psychology',
+  'Engineering', 'Communications', 'Education', 'Pre-Med',
+  'Political Science', 'Mathematics', 'Nursing', 'Economics',
+  'English', 'Sociology', 'Other',
+];
+
+const YEARS = [2025, 2026, 2027, 2028, 2029];
+
+const GPA_OPTIONS = ['2.0', '2.3', '2.5', '2.7', '3.0', '3.2', '3.3', '3.5', '3.7', '3.8', '3.9', '4.0'];
+
+const StepNode = ({ icon, state, label }: { icon: string; state: 'active' | 'done' | 'idle'; label: string }) => (
+  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem' }}>
+    <div style={{
+      width: 48, height: 48, borderRadius: '50%',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: state === 'done' ? '#E8B84B' : state === 'active' ? '#1E3A5F' : '#162030',
+      border: state === 'active' ? '2px solid #E8B84B' : state === 'done' ? 'none' : '2px solid rgba(255,255,255,0.07)',
+      fontSize: '1rem', flexShrink: 0,
+    }}>
+      {state === 'done'
+        ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0A1628" strokeWidth="2.5"><path d="M5 13l4 4L19 7"/></svg>
+        : <span style={{ filter: state === 'idle' ? 'grayscale(1) opacity(0.25)' : 'none' }}>{icon}</span>
+      }
+    </div>
+    <span style={{
+      fontSize: '0.62rem', fontWeight: 500, fontFamily: "'DM Sans', sans-serif",
+      color: state === 'active' ? '#E8B84B' : state === 'done' ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.18)',
+    }}>{label}</span>
+  </div>
+);
 
 export default function ProfileSetup() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  
   const [loading, setLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [email, setEmail] = useState('');
-  const [school, setSchool] = useState<School | ''>('');
-  const [gpa, setGpa] = useState('');
-  const [major, setMajor] = useState('');
-  const [graduationYear, setGraduationYear] = useState('');
-  const [resumeFile, setResumeFile] = useState<File | null>(null);
-  const [existingProfile, setExistingProfile] = useState(false);
-  const [majorOpen, setMajorOpen] = useState(false);
+  const [form, setForm] = useState({
+    first_name: '', last_name: '', school: '', major: '', graduation_year: '', gpa: '',
+  });
 
-  useEffect(() => {
-    if (user) {
-      loadExistingProfile();
-    }
-  }, [user]);
+  const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+    setForm(f => ({ ...f, [k]: e.target.value }));
 
-
-  const loadExistingProfile = async () => {
+  const handleSubmit = async () => {
     if (!user) return;
-    
-    const { data, error } = await supabase
-      .from('student_profiles')
-      .select('*')
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    if (data && !error) {
-      setExistingProfile(true);
-      setFirstName(data.first_name || '');
-      setLastName(data.last_name || '');
-      setEmail(data.email || user.email || '');
-      setSchool(data.school as School);
-      setGpa(data.gpa.toString());
-      setMajor(data.major);
-      setGraduationYear(data.graduation_year.toString());
-    } else {
-      // Pre-fill email from auth user
-      setEmail(user.email || '');
-    }
-    setInitialLoading(false);
-  };
-
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !school) return;
-
-    const gpaNum = parseFloat(gpa);
-    if (isNaN(gpaNum) || gpaNum < 0 || gpaNum > 4) {
-      toast({
-        variant: 'destructive',
-        title: 'Invalid GPA',
-        description: 'Please enter a GPA between 0.00 and 4.00',
-      });
+    const required = ['first_name', 'last_name', 'school', 'major', 'graduation_year', 'gpa'];
+    if (required.some(k => !form[k as keyof typeof form])) {
+      toast({ variant: 'destructive', title: 'Missing fields', description: 'Please fill in all fields.' });
       return;
     }
-
     setLoading(true);
-
     try {
-      let resumeUrl = null;
-      
-      // Upload resume if provided
-      if (resumeFile) {
-        const fileExt = resumeFile.name.split('.').pop();
-        if (fileExt?.toLowerCase() !== 'pdf') {
-          toast({
-            variant: 'destructive',
-            title: 'Invalid file type',
-            description: 'Please upload a PDF file only',
-          });
-          setLoading(false);
-          return;
-        }
-
-        // Use standardized naming: resume_<user_id>.pdf
-        const filePath = `resume_${user.id}.pdf`;
-        const { error: uploadError } = await supabase.storage
-          .from('resumes')
-          .upload(filePath, resumeFile, { upsert: true });
-
-        if (uploadError) {
-          console.error('Resume upload error:', uploadError);
-        } else {
-          resumeUrl = filePath;
-        }
-      }
-
-      const profileData = {
+      const { error } = await supabase.from('student_profiles').upsert({
         user_id: user.id,
-        first_name: firstName,
-        last_name: lastName,
-        email,
-        school: school as School,
-        gpa: gpaNum,
-        major,
-        graduation_year: parseInt(graduationYear),
-        resume_url: resumeUrl,
-      };
-
-      if (existingProfile) {
-        const { error } = await supabase
-          .from('student_profiles')
-          .update(profileData)
-          .eq('user_id', user.id);
-
-        if (error) throw error;
-        
-        toast({
-          title: 'Profile updated!',
-          description: 'Your profile has been successfully updated.',
-        });
-      } else {
-        const { error } = await supabase
-          .from('student_profiles')
-          .insert(profileData);
-
-        if (error) throw error;
-        
-        toast({
-          title: 'Profile created!',
-          description: 'Your profile has been successfully created.',
-        });
-      }
-
-      navigate('/dashboard');
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: error.message || 'Failed to save profile',
+        first_name: form.first_name,
+        last_name: form.last_name,
+        email: user.email,
+        school: form.school,
+        major: form.major,
+        graduation_year: parseInt(form.graduation_year),
+        gpa: parseFloat(form.gpa),
       });
+      if (error) throw error;
+      navigate('/dashboard');
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'Error', description: err.message });
     } finally {
       setLoading(false);
     }
   };
 
-  if (initialLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-accent" />
-      </div>
-    );
-  }
-
-
   return (
-    <div className="min-h-screen bg-background py-12 px-4">
-      <div className="max-w-md mx-auto">
-        <Link to="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary mb-6 transition-colors">
-          <ArrowLeft className="h-4 w-4" />
-          Back to Home
-        </Link>
-        
-        <div className="flex items-center justify-center gap-2 mb-8">
-          <GraduationCap className="h-10 w-10 text-accent" />
-          <span className="font-display text-3xl font-bold text-primary">Elevaid</span>
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        .profile-bg {
+          min-height: 100vh;
+          background: #0A1628;
+          display: flex; align-items: center; justify-content: center;
+          padding: 2rem;
+          position: relative; overflow: hidden;
+        }
+        .profile-bg::before {
+          content: '';
+          position: absolute; top: -100px; right: 10%;
+          width: 500px; height: 400px;
+          background: radial-gradient(ellipse, rgba(30,58,110,0.5) 0%, transparent 65%);
+          pointer-events: none;
+        }
+        .profile-card {
+          background: #111E2E;
+          border: 1px solid rgba(255,255,255,0.06);
+          border-radius: 24px;
+          padding: 2.5rem 2.5rem 2.25rem;
+          width: 100%; max-width: 460px;
+          position: relative; z-index: 1;
+          box-shadow: 0 32px 80px rgba(0,0,0,0.5);
+          animation: cardIn 0.5s cubic-bezier(0.16,1,0.3,1) forwards;
+        }
+        @keyframes cardIn {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .p-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2.25rem; }
+        .p-logo { font-family: 'Sora', sans-serif; font-size: 1.1rem; font-weight: 800; color: #fff; letter-spacing: -0.02em; display: flex; align-items: center; gap: 0.35rem; }
+        .p-logo em { color: #E8B84B; font-style: normal; }
+        .p-step-info { font-size: 0.72rem; color: rgba(255,255,255,0.25); font-family: 'DM Sans', sans-serif; }
+        .prog { display: flex; align-items: center; justify-content: center; margin-bottom: 2rem; }
+        .prog-line { width: 56px; height: 2px; flexShrink: 0; margin-bottom: 1.55rem; }
+        .pbar-wrap { height: 3px; background: rgba(255,255,255,0.06); border-radius: 100px; margin-bottom: 2rem; overflow: hidden; }
+        .pbar-fill { height: 100%; border-radius: 100px; background: #E8B84B; width: 50%; transition: width 0.5s ease; }
+        .p-h { font-family: 'Sora', sans-serif; font-size: 1.55rem; font-weight: 800; color: #fff; letter-spacing: -0.025em; margin-bottom: 0.3rem; }
+        .p-sub { font-size: 0.8rem; color: rgba(255,255,255,0.28); margin-bottom: 1.75rem; font-family: 'DM Sans', sans-serif; }
+        .f-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; margin-bottom: 0.65rem; }
+        .f-field {
+          width: 100%;
+          background: #162030;
+          border: 1px solid rgba(255,255,255,0.07);
+          border-radius: 12px;
+          padding: 0.85rem 1rem;
+          font-size: 0.85rem; color: rgba(255,255,255,0.6);
+          font-family: 'DM Sans', sans-serif;
+          outline: none; display: block;
+          margin-bottom: 0.65rem;
+          appearance: none; -webkit-appearance: none;
+          transition: border-color 0.2s;
+        }
+        .f-field:focus { border-color: rgba(232,184,75,0.4); }
+        .f-field::placeholder { color: rgba(255,255,255,0.18); }
+        .f-field option { background: #162030; color: #fff; }
+        .f-field:last-child { margin-bottom: 0; }
+        .f-row .f-field { margin-bottom: 0; }
+        .p-cta {
+          width: 100%; background: #E8B84B; color: #0A1628;
+          border: none; border-radius: 12px; padding: 1rem;
+          font-size: 0.92rem; font-weight: 700; cursor: pointer;
+          font-family: 'DM Sans', sans-serif; margin-top: 0.9rem;
+          letter-spacing: 0.01em;
+          transition: transform 0.15s, box-shadow 0.15s;
+          box-shadow: 0 4px 16px rgba(232,184,75,0.25);
+          display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+        }
+        .p-cta:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(232,184,75,0.35); }
+        .p-cta:disabled { opacity: 0.6; cursor: not-allowed; }
+        .f-input-white { color: #fff !important; }
+      `}</style>
+
+      <div className="profile-bg">
+        <div className="profile-card">
+          <div className="p-top">
+            <div className="p-logo">🎓 <em>Elev</em>aid</div>
+            <div className="p-step-info">Step 2 of 3</div>
+          </div>
+
+          <div className="prog">
+            <StepNode icon="👤" state="done" label="Account" />
+            <div className="prog-line" style={{ background: '#E8B84B' }} />
+            <StepNode icon="📋" state="active" label="Profile" />
+            <div className="prog-line" style={{ background: 'rgba(255,255,255,0.06)' }} />
+            <StepNode icon="⭐" state="idle" label="Matches" />
+          </div>
+
+          <div className="pbar-wrap"><div className="pbar-fill" /></div>
+
+          <div className="p-h">Tell us about yourself.</div>
+          <div className="p-sub">This is how we match you. Under 60 seconds.</div>
+
+          <div className="f-row">
+            <input className="f-field f-input-white" type="text" placeholder="First name" value={form.first_name} onChange={set('first_name')} style={{ marginBottom: 0 }} />
+            <input className="f-field f-input-white" type="text" placeholder="Last name" value={form.last_name} onChange={set('last_name')} style={{ marginBottom: 0 }} />
+          </div>
+
+          <select className="f-field" value={form.school} onChange={set('school')}>
+            <option value="" disabled>Select your school</option>
+            {SCHOOLS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+          </select>
+
+          <div className="f-row">
+            <select className="f-field" value={form.major} onChange={set('major')} style={{ marginBottom: 0 }}>
+              <option value="" disabled>Major</option>
+              {MAJORS.map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+            <select className="f-field" value={form.graduation_year} onChange={set('graduation_year')} style={{ marginBottom: 0 }}>
+              <option value="" disabled>Grad Year</option>
+              {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
+
+          <select className="f-field" value={form.gpa} onChange={set('gpa')} style={{ marginBottom: 0 }}>
+            <option value="" disabled>GPA</option>
+            {GPA_OPTIONS.map(g => <option key={g} value={g}>{g}</option>)}
+          </select>
+
+          <button className="p-cta" onClick={handleSubmit} disabled={loading}>
+            {loading ? 'Setting up...' : <>Find My Scholarships <span>⚡</span></>}
+          </button>
         </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="font-display text-2xl">
-              {existingProfile ? 'Edit Your Profile' : 'Complete Your Profile'}
-            </CardTitle>
-            <CardDescription>
-              Tell us about yourself so we can match you with scholarships.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name *</Label>
-                  <Input
-                    id="firstName"
-                    placeholder="John"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name *</Label>
-                  <Input
-                    id="lastName"
-                    placeholder="Doe"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="email">Email *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="john.doe@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="school">School *</Label>
-                <Select value={school} onValueChange={(v) => setSchool(v as School)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select your school" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SCHOOLS.map((s) => (
-                      <SelectItem key={s.value} value={s.value}>
-                        {s.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="gpa">GPA (0.00 - 4.00) *</Label>
-                <Input
-                  id="gpa"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  max="4"
-                  placeholder="3.50"
-                  value={gpa}
-                  onChange={(e) => setGpa(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="major">Major *</Label>
-                <Popover open={majorOpen} onOpenChange={setMajorOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={majorOpen}
-                      className="w-full justify-between font-normal"
-                    >
-                      {major || "Select your major"}
-                      <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-full p-0" align="start">
-                    <Command>
-                      <CommandInput placeholder="Search majors..." />
-                      <CommandList>
-                        <CommandEmpty>No major found.</CommandEmpty>
-                        <CommandGroup className="max-h-64 overflow-y-auto">
-                          {MAJORS.map((m) => (
-                            <CommandItem
-                              key={m}
-                              value={m}
-                              onSelect={() => {
-                                setMajor(m);
-                                setMajorOpen(false);
-                              }}
-                            >
-                              {m}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="graduationYear">Graduation Year *</Label>
-                <Select value={graduationYear} onValueChange={setGraduationYear}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select year" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {GRADUATION_YEARS.map((year) => (
-                      <SelectItem key={year} value={year.toString()}>
-                        {year}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="resume">Resume (PDF, optional)</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    id="resume"
-                    type="file"
-                    accept=".pdf"
-                    onChange={(e) => setResumeFile(e.target.files?.[0] || null)}
-                    className="file:mr-4 file:py-1 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-accent file:text-accent-foreground hover:file:bg-accent/90"
-                  />
-                </div>
-                {resumeFile && (
-                  <p className="text-sm text-muted-foreground flex items-center gap-1">
-                    <Upload className="h-3 w-3" />
-                    {resumeFile.name}
-                  </p>
-                )}
-              </div>
-
-              <Button type="submit" className="w-full" disabled={loading || !firstName || !lastName || !email || !school || !gpa || !major || !graduationYear}>
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {existingProfile ? 'Update Profile' : 'Complete Setup'}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
       </div>
-    </div>
+    </>
   );
 }
