@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
