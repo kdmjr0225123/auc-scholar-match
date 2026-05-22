@@ -22,24 +22,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userRole, setUserRole] = useState<AppRole | null>(null);
 
   useEffect(() => {
-    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
-        
-        // Fetch user role with setTimeout to avoid deadlock
+
         if (session?.user) {
           setTimeout(() => {
             fetchUserRole(session.user.id);
           }, 0);
+
+          // Handle OAuth redirect — check if user has a profile
+          if (event === 'SIGNED_IN') {
+            const { data: profile } = await supabase
+              .from('student_profiles')
+              .select('id')
+              .eq('user_id', session.user.id)
+              .maybeSingle();
+
+            const currentPath = window.location.pathname;
+            if (currentPath === '/' || currentPath === '/auth') {
+              if (profile) {
+                window.location.href = '/dashboard';
+              } else {
+                window.location.href = '/profile';
+              }
+            }
+          }
         } else {
           setUserRole(null);
         }
       }
     );
 
-    // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -68,22 +83,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string) => {
     const redirectUrl = `${window.location.origin}/`;
-    
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: {
-        emailRedirectTo: redirectUrl,
-      },
+      options: { emailRedirectTo: redirectUrl },
     });
     return { error };
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     return { error };
   };
 
