@@ -146,7 +146,7 @@ export default function Landing() {
           position: sticky; top: 0; z-index: 100;
           display: flex; justify-content: space-between; align-items: center;
           padding: 0.75rem 2rem;
-          padding-top: max(0.75rem, env(safe-area-inset-top));
+          padding-top: calc(0.75rem + env(safe-area-inset-top, 0px));
           min-height: 64px;
           background: rgba(255,255,255,0.96);
           backdrop-filter: blur(16px);
