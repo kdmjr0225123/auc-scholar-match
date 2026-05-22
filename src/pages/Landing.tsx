@@ -145,9 +145,12 @@ export default function Landing() {
         .e-nav {
           position: sticky; top: 0; z-index: 100;
           display: flex; justify-content: space-between; align-items: center;
-          padding: 0 2.5rem; height: 64px;
-          background: rgba(255,255,255,0.92);
+          padding: 0.75rem 2rem;
+          padding-top: max(0.75rem, env(safe-area-inset-top));
+          min-height: 64px;
+          background: rgba(255,255,255,0.96);
           backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
           border-bottom: 1px solid rgba(0,0,0,0.06);
         }
         .e-logo {
@@ -181,7 +184,7 @@ export default function Landing() {
         /* HERO */
         .e-hero {
           background: linear-gradient(158deg, #1a1a3e 0%, #2d1b69 36%, #1e3a6e 68%, #0f2d4a 100%);
-          padding: 5rem 2rem 6rem;
+          padding: 3.5rem 1.5rem 4rem;
           text-align: center;
           position: relative; overflow: hidden;
         }
