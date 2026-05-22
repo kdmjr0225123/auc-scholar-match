@@ -2,25 +2,53 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" type="image/png" href="/favicon.png" />
-    <title>Elevaid – Scholarship Matching for AUC Students</title>
-    <meta name="description" content="Rule-based scholarship discovery for students at AUC institutions. See what you qualify for and why." />
-    <meta name="author" content="Elevaid" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
-    <meta property="og:title" content="Elevaid – Scholarship Matching for AUC Students" />
-    <meta property="og:description" content="Rule-based scholarship discovery for students at AUC institutions. Transparent, explainable eligibility matching." />
+    <!-- Primary -->
+    <title>Elevaid — Scholarship Matching for AUC Students</title>
+    <meta name="description" content="Elevaid matches Morehouse, Spelman, Clark Atlanta, and Morris Brown students to scholarships they actually qualify for — and shows exactly why." />
+    <meta name="author" content="Elevaid" />
+    <meta name="theme-color" content="#1a1a3e" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- iOS PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Elevaid" />
+
+    <!-- Android PWA -->
+    <meta name="mobile-web-app-capable" content="yes" />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Elevaid — Scholarship Matching for AUC Students" />
+    <meta property="og:description" content="Elevaid matches Morehouse, Spelman, Clark Atlanta, and Morris Brown students to scholarships they actually qualify for — and shows exactly why." />
     <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://elevaid.pro" />
     <meta property="og:site_name" content="Elevaid" />
 
+    <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@Elevaid" />
-    <meta name="twitter:title" content="Elevaid – Scholarship Matching for AUC Students" />
-    <meta name="twitter:description" content="Rule-based scholarship discovery for students at AUC institutions. Transparent, explainable eligibility matching." />
+    <meta name="twitter:title" content="Elevaid — Scholarship Matching for AUC Students" />
+    <meta name="twitter:description" content="Elevaid matches Morehouse, Spelman, Clark Atlanta, and Morris Brown students to scholarships they actually qualify for — and shows exactly why." />
   </head>
-
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then((reg) => console.log('Elevaid SW registered:', reg.scope))
+            .catch((err) => console.log('SW registration failed:', err));
+        });
+      }
+    </script>
   </body>
 </html>
