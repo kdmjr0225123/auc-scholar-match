@@ -37,7 +37,7 @@ self.addEventListener('fetch', (event) => {
   if (
     event.request.method !== 'GET' ||
     event.request.url.includes('supabase.co') ||
-    event.request.url.includes('anthropic.com')
+    event.request.url.includes('anthropic.com') || event.request.url.includes('/dashboard') || event.request.url.includes('/profile') || event.request.url.includes('/auth')
   ) {
     return;
   }
