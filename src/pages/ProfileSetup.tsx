@@ -52,23 +52,30 @@ export default function ProfileSetup() {
   };
 
   const handleSubmit = async () => {
-    if (!user) return;
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+    next(); // show loading immediately
     try {
       const { error } = await supabase.from('student_profiles').upsert({
         user_id: user.id,
-        first_name: form.first_name,
-        last_name: form.last_name,
+        first_name: form.first_name || 'Student',
+        last_name: form.last_name || '',
         email: user.email,
         school: form.school,
         major: form.major,
         graduation_year: parseInt(form.graduation_year),
         gpa: parseFloat(form.gpa),
       });
-      if (error) throw error;
-      next();
-      setTimeout(() => navigate('/dashboard'), 2200);
+      if (error) {
+        console.error('Profile upsert error:', error);
+        toast({ variant: 'destructive', title: 'Error saving profile', description: error.message });
+      }
     } catch (err: any) {
-      toast({ variant: 'destructive', title: 'Error', description: err.message });
+      console.error('Submit error:', err);
+    } finally {
+      setTimeout(() => navigate('/dashboard'), 1500);
     }
   };
 
