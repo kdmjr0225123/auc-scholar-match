@@ -1,14 +1,14 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
 const SCHOOLS = [
-  { value: 'morehouse', label: 'Morehouse', emoji: '🏛️' },
-  { value: 'spelman', label: 'Spelman', emoji: '🎓' },
-  { value: 'clark_atlanta', label: 'Clark Atlanta', emoji: '📚' },
-  { value: 'morris_brown', label: 'Morris Brown', emoji: '⭐' },
+  { value: 'morehouse', label: 'Morehouse College', short: 'Morehouse', color: '#8B0000', initials: 'MC' },
+  { value: 'spelman', label: 'Spelman College', short: 'Spelman', color: '#003F87', initials: 'SC' },
+  { value: 'clark_atlanta', label: 'Clark Atlanta University', short: 'Clark Atlanta', color: '#CC0000', initials: 'CAU' },
+  { value: 'morris_brown', label: 'Morris Brown College', short: 'Morris Brown', color: '#4B0082', initials: 'MB' },
 ];
 
 const MAJORS = [
@@ -19,21 +19,14 @@ const MAJORS = [
 ];
 
 const YEARS = [
-  { value: '2025', label: 'Class of 2025' },
-  { value: '2026', label: 'Class of 2026' },
   { value: '2027', label: 'Class of 2027' },
   { value: '2028', label: 'Class of 2028' },
   { value: '2029', label: 'Class of 2029' },
+  { value: '2030', label: 'Class of 2030' },
 ];
 
-const GPA_RANGES = [
-  { value: '2.0', label: '2.0', sub: 'and above' },
-  { value: '2.5', label: '2.5', sub: 'and above' },
-  { value: '3.0', label: '3.0', sub: 'and above' },
-  { value: '3.5', label: '3.5', sub: 'and above' },
-  { value: '3.8', label: '3.8', sub: 'and above' },
-  { value: '4.0', label: '4.0', sub: 'perfect' },
-];
+// GPA values from 0.0 to 4.0 in 0.1 increments
+const GPA_VALUES = Array.from({ length: 41 }, (_, i) => (i * 0.1).toFixed(1));
 
 const STEPS = ['name', 'school', 'major', 'year', 'gpa', 'loading'];
 
@@ -43,9 +36,10 @@ export default function ProfileSetup() {
   const { toast } = useToast();
   const [step, setStep] = useState(0);
   const [form, setForm] = useState({
-    first_name: '', last_name: '', school: '', major: '', graduation_year: '', gpa: '',
+    first_name: '', last_name: '', school: '', major: '', graduation_year: '', gpa: '3.0',
   });
   const [majorSearch, setMajorSearch] = useState('');
+  const gpaRef = useRef<HTMLDivElement>(null);
 
   const currentStep = STEPS[step];
   const progress = (step / (STEPS.length - 1)) * 100;
@@ -54,7 +48,7 @@ export default function ProfileSetup() {
 
   const select = (key: string, value: string) => {
     setForm(f => ({ ...f, [key]: value }));
-    setTimeout(() => next(), 200);
+    setTimeout(() => next(), 220);
   };
 
   const handleSubmit = async () => {
@@ -120,12 +114,31 @@ export default function ProfileSetup() {
         .ob-question { font-family: 'Sora', sans-serif; font-size: clamp(1.5rem, 6vw, 2rem); font-weight: 800; color: #fff; letter-spacing: -0.025em; line-height: 1.15; margin-bottom: 0.5rem; }
         .ob-question em { color: #E8B84B; font-style: normal; }
         .ob-sub { font-size: 0.85rem; color: rgba(255,255,255,0.3); margin-bottom: 2rem; }
+
+        /* SCHOOL */
         .ob-school-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
-        .ob-school-btn { background: #111E2E; border: 1px solid rgba(255,255,255,0.07); border-radius: 16px; padding: 1.25rem 1rem; cursor: pointer; text-align: center; transition: all 0.15s; }
-        .ob-school-btn.selected { background: rgba(232,184,75,0.1); border-color: rgba(232,184,75,0.4); }
+        .ob-school-btn {
+          background: #111E2E; border: 1px solid rgba(255,255,255,0.07);
+          border-radius: 16px; padding: 1.25rem 1rem;
+          cursor: pointer; text-align: center; transition: all 0.15s;
+          display: flex; flex-direction: column; align-items: center; gap: 0.6rem;
+        }
+        .ob-school-btn.selected { border-color: rgba(232,184,75,0.5); background: rgba(232,184,75,0.08); }
         .ob-school-btn:active { transform: scale(0.97); }
-        .ob-school-emoji { font-size: 1.75rem; display: block; margin-bottom: 0.5rem; }
-        .ob-school-name { font-size: 0.88rem; font-weight: 700; color: #fff; font-family: 'Sora', sans-serif; }
+        .ob-school-logo {
+          width: 52px; height: 52px; border-radius: 50%;
+          object-fit: cover; background: rgba(255,255,255,0.05);
+          border: 2px solid rgba(255,255,255,0.08);
+        }
+        .ob-school-logo-fallback {
+          width: 52px; height: 52px; border-radius: 50%;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 1.4rem; background: rgba(255,255,255,0.05);
+          border: 2px solid rgba(255,255,255,0.08);
+        }
+        .ob-school-name { font-size: 0.82rem; font-weight: 700; color: #fff; font-family: 'Sora', sans-serif; line-height: 1.2; }
+
+        /* YEAR */
         .ob-year-list { display: flex; flex-direction: column; gap: 0.65rem; }
         .ob-year-btn { background: #111E2E; border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; padding: 1rem 1.25rem; cursor: pointer; display: flex; align-items: center; justify-content: space-between; transition: all 0.15s; }
         .ob-year-btn.selected { background: rgba(232,184,75,0.1); border-color: rgba(232,184,75,0.4); }
@@ -133,12 +146,66 @@ export default function ProfileSetup() {
         .ob-year-label { font-size: 0.92rem; font-weight: 600; color: #fff; }
         .ob-year-check { width: 20px; height: 20px; border-radius: 50%; background: rgba(255,255,255,0.05); border: 1.5px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; }
         .ob-year-btn.selected .ob-year-check { background: #E8B84B; border-color: #E8B84B; }
-        .ob-gpa-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.65rem; }
-        .ob-gpa-btn { background: #111E2E; border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; padding: 1.1rem 0.5rem; cursor: pointer; text-align: center; transition: all 0.15s; }
-        .ob-gpa-btn.selected { background: rgba(232,184,75,0.1); border-color: rgba(232,184,75,0.4); }
-        .ob-gpa-btn:active { transform: scale(0.97); }
-        .ob-gpa-num { font-family: 'Sora', sans-serif; font-size: 1.2rem; font-weight: 800; color: #E8B84B; }
-        .ob-gpa-sub { font-size: 0.62rem; color: rgba(255,255,255,0.3); margin-top: 0.2rem; }
+
+        /* GPA SCROLL PICKER */
+        .ob-gpa-picker-wrap {
+          position: relative;
+          height: 200px;
+          overflow: hidden;
+          margin-bottom: 1.5rem;
+        }
+        .ob-gpa-picker-wrap::before,
+        .ob-gpa-picker-wrap::after {
+          content: '';
+          position: absolute; left: 0; right: 0; z-index: 2;
+          height: 72px; pointer-events: none;
+        }
+        .ob-gpa-picker-wrap::before {
+          top: 0;
+          background: linear-gradient(to bottom, #0A1628 0%, transparent 100%);
+        }
+        .ob-gpa-picker-wrap::after {
+          bottom: 0;
+          background: linear-gradient(to top, #0A1628 0%, transparent 100%);
+        }
+        .ob-gpa-selector {
+          position: absolute; top: 50%; left: 0; right: 0;
+          transform: translateY(-50%);
+          height: 48px; z-index: 1;
+          background: rgba(232,184,75,0.08);
+          border-top: 1px solid rgba(232,184,75,0.3);
+          border-bottom: 1px solid rgba(232,184,75,0.3);
+          pointer-events: none;
+        }
+        .ob-gpa-scroll {
+          display: flex; flex-direction: column;
+          height: 100%;
+          overflow-y: scroll;
+          scroll-snap-type: y mandatory;
+          scrollbar-width: none;
+          -webkit-overflow-scrolling: touch;
+        }
+        .ob-gpa-scroll::-webkit-scrollbar { display: none; }
+        .ob-gpa-item {
+          height: 48px;
+          display: flex; align-items: center; justify-content: center;
+          scroll-snap-align: center;
+          font-family: 'Sora', sans-serif;
+          font-size: 1.4rem; font-weight: 700;
+          color: rgba(255,255,255,0.3);
+          transition: color 0.1s;
+          cursor: pointer;
+          flex-shrink: 0;
+        }
+        .ob-gpa-item.active { color: #E8B84B; font-size: 1.6rem; }
+        .ob-gpa-spacer { height: 76px; flex-shrink: 0; }
+        .ob-gpa-display {
+          text-align: center; margin-bottom: 1rem;
+        }
+        .ob-gpa-num { font-family: 'Sora', sans-serif; font-size: 3rem; font-weight: 800; color: #E8B84B; letter-spacing: -0.03em; line-height: 1; }
+        .ob-gpa-label { font-size: 0.78rem; color: rgba(255,255,255,0.3); margin-top: 0.3rem; }
+
+        /* MAJOR */
         .ob-search { width: 100%; background: #111E2E; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 0.85rem 1rem; font-size: 0.88rem; color: #fff; font-family: 'DM Sans', sans-serif; outline: none; margin-bottom: 0.75rem; }
         .ob-search::placeholder { color: rgba(255,255,255,0.2); }
         .ob-search:focus { border-color: rgba(232,184,75,0.4); }
@@ -147,13 +214,19 @@ export default function ProfileSetup() {
         .ob-major-btn { background: #111E2E; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 0.85rem 1rem; cursor: pointer; text-align: left; font-size: 0.88rem; font-weight: 500; color: rgba(255,255,255,0.7); font-family: 'DM Sans', sans-serif; transition: all 0.15s; }
         .ob-major-btn.selected { background: rgba(232,184,75,0.1); border-color: rgba(232,184,75,0.4); color: #fff; }
         .ob-major-btn:active { transform: scale(0.99); }
+
+        /* NAME */
         .ob-name-fields { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem; }
         .ob-input { width: 100%; background: #111E2E; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 0.95rem 1rem; font-size: 0.95rem; color: #fff; font-family: 'DM Sans', sans-serif; outline: none; transition: border-color 0.2s; }
         .ob-input::placeholder { color: rgba(255,255,255,0.2); }
         .ob-input:focus { border-color: rgba(232,184,75,0.4); }
-        .ob-cta { width: 100%; background: #E8B84B; color: #0A1628; border: none; border-radius: 12px; padding: 1rem; font-size: 0.95rem; font-weight: 700; cursor: pointer; font-family: 'DM Sans', sans-serif; letter-spacing: 0.01em; transition: transform 0.15s, opacity 0.15s; margin-top: 0.5rem; }
+
+        /* CTA */
+        .ob-cta { width: 100%; background: #E8B84B; color: #0A1628; border: none; border-radius: 12px; padding: 1rem; font-size: 0.95rem; font-weight: 700; cursor: pointer; font-family: 'DM Sans', sans-serif; letter-spacing: 0.01em; transition: transform 0.15s, opacity 0.15s; }
         .ob-cta:disabled { opacity: 0.4; cursor: not-allowed; }
         .ob-cta:active:not(:disabled) { transform: scale(0.98); }
+
+        /* LOADING */
         .ob-loading { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; gap: 1.5rem; padding: 2rem; text-align: center; }
         .ob-spinner { width: 48px; height: 48px; border: 3px solid rgba(232,184,75,0.15); border-top-color: #E8B84B; border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -211,8 +284,18 @@ export default function ProfileSetup() {
             <div className="ob-school-grid">
               {SCHOOLS.map(s => (
                 <button key={s.value} className={`ob-school-btn${form.school === s.value ? ' selected' : ''}`} onClick={() => select('school', s.value)}>
-                  <span className="ob-school-emoji">{s.emoji}</span>
-                  <div className="ob-school-name">{s.label}</div>
+                  <div style={{
+                    width: 56, height: 56, borderRadius: '50%',
+                    background: s.color,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: s.initials.length > 2 ? '0.7rem' : '0.9rem',
+                    fontWeight: 800, color: '#fff',
+                    fontFamily: "'Sora', sans-serif",
+                    letterSpacing: '-0.02em',
+                    flexShrink: 0,
+                    border: form.school === s.value ? '2px solid #E8B84B' : '2px solid rgba(255,255,255,0.1)',
+                  }}>{s.initials}</div>
+                  <div className="ob-school-name">{s.short}</div>
                 </button>
               ))}
             </div>
@@ -252,16 +335,35 @@ export default function ProfileSetup() {
         {currentStep === 'gpa' && (
           <div className="ob-content" key="gpa">
             <div className="ob-question">What's your <em>GPA?</em></div>
-            <div className="ob-sub">Pick the closest to your current GPA.</div>
-            <div className="ob-gpa-grid">
-              {GPA_RANGES.map(g => (
-                <button key={g.value} className={`ob-gpa-btn${form.gpa === g.value ? ' selected' : ''}`} onClick={() => setForm(f => ({ ...f, gpa: g.value }))}>
-                  <div className="ob-gpa-num">{g.label}</div>
-                  <div className="ob-gpa-sub">{g.sub}</div>
-                </button>
-              ))}
+            <div className="ob-sub">Slide to your exact GPA.</div>
+
+            <div style={{ textAlign: 'center', margin: '1.5rem 0' }}>
+              <div style={{ fontFamily: "'Sora', sans-serif", fontSize: '4rem', fontWeight: 800, color: '#E8B84B', letterSpacing: '-0.03em', lineHeight: 1 }}>{parseFloat(form.gpa).toFixed(1)}</div>
+              <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.3)', marginTop: '0.35rem' }}>out of 4.0</div>
             </div>
-            <button className="ob-cta" style={{ marginTop: '1.5rem' }} onClick={handleSubmit} disabled={!form.gpa}>Find My Scholarships ⚡</button>
+
+            <div style={{ padding: '0 0.5rem', marginBottom: '2rem' }}>
+              <input
+                type="range"
+                min="0"
+                max="40"
+                step="1"
+                value={Math.round(parseFloat(form.gpa) * 10)}
+                onChange={e => setForm(f => ({ ...f, gpa: (parseInt(e.target.value) / 10).toFixed(1) }))}
+                style={{ width: '100%', accentColor: '#E8B84B', height: '4px', cursor: 'pointer' }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem' }}>
+                <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.25)' }}>0.0</span>
+                <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.25)' }}>1.0</span>
+                <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.25)' }}>2.0</span>
+                <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.25)' }}>3.0</span>
+                <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.25)' }}>4.0</span>
+              </div>
+            </div>
+
+            <button className="ob-cta" onClick={handleSubmit}>
+              Find My Scholarships ⚡
+            </button>
           </div>
         )}
       </div>
