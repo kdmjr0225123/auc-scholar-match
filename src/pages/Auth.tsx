@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 type Mode = 'signup' | 'signin';
@@ -35,21 +34,16 @@ export default function Auth() {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Handle OAuth redirect on mount
   useEffect(() => {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         const { data: profile } = await supabase
-          .from("student_profiles")
-          .select("id")
-          .eq("user_id", session.user.id)
+          .from('student_profiles')
+          .select('id')
+          .eq('user_id', session.user.id)
           .maybeSingle();
-        if (profile) {
-          navigate("/dashboard");
-        } else {
-          navigate("/profile");
-        }
+        navigate(profile ? '/dashboard' : '/profile');
       }
     };
     checkSession();
@@ -59,18 +53,25 @@ export default function Auth() {
     setForm(f => ({ ...f, [k]: e.target.value }));
 
   const handleSubmit = async () => {
+    if (!form.email || !form.password) {
+      toast({ variant: 'destructive', title: 'Missing fields', description: 'Please fill in all fields.' });
+      return;
+    }
     setLoading(true);
     try {
       if (mode === 'signup') {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email: form.email,
           password: form.password,
           options: { data: { first_name: form.firstName, last_name: form.lastName } }
         });
         if (error) throw error;
-        navigate('/profile');
+        if (data.user) navigate('/profile');
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email: form.email, password: form.password });
+        const { error } = await supabase.auth.signInWithPassword({
+          email: form.email,
+          password: form.password,
+        });
         if (error) throw error;
         navigate('/dashboard');
       }
@@ -80,8 +81,6 @@ export default function Auth() {
       setLoading(false);
     }
   };
-
-
 
   return (
     <>
@@ -163,18 +162,6 @@ export default function Auth() {
         }
         .auth-cta:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(232,184,75,0.35); }
         .auth-cta:disabled { opacity: 0.6; cursor: not-allowed; }
-        .auth-div {
-          text-align: center; font-size: 0.7rem; color: rgba(255,255,255,0.14);
-          margin: 1rem 0; position: relative;
-          font-family: 'DM Sans', sans-serif;
-        }
-        .auth-div::before, .auth-div::after {
-          content: ''; position: absolute; top: 50%;
-          width: 43%; height: 1px; background: rgba(255,255,255,0.06);
-        }
-        .auth-div::before { left: 0; }
-        .auth-div::after { right: 0; }
-
         .auth-switch {
           text-align: center; font-size: 0.73rem;
           color: rgba(255,255,255,0.22); margin-top: 1.15rem;
