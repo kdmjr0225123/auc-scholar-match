@@ -58,29 +58,35 @@ export default function ProfileSetup() {
     next(); // show loading screen immediately
 
     try {
-      const { error } = await supabase.from('student_profiles').upsert(
-        {
-          user_id: user.id,
-          first_name: form.first_name || 'Student',
-          last_name: form.last_name || '',
-          email: user.email,
-          school: form.school as 'morehouse' | 'spelman' | 'clark_atlanta' | 'morris_brown',
-          major: form.major,
-          graduation_year: parseInt(form.graduation_year),
-          gpa: parseFloat(form.gpa),
-        },
-        { onConflict: 'user_id' } // upsert on user_id so re-runs don't create duplicates
-      );
+      const profileData = {
+        user_id: user.id,
+        first_name: form.first_name || 'Student',
+        last_name: form.last_name || '',
+        email: user.email,
+        school: form.school as 'morehouse' | 'spelman' | 'clark_atlanta' | 'morris_brown',
+        major: form.major,
+        graduation_year: parseInt(form.graduation_year),
+        gpa: parseFloat(form.gpa),
+      };
 
-      if (error) {
-        console.error('Profile upsert error:', error);
-        // Still navigate to dashboard — don't leave user stuck on loading screen
-        // Dashboard will handle missing profile gracefully
-        toast({
-          variant: 'destructive',
-          title: 'Profile saved partially',
-          description: 'Some info may not have saved. You can update it later.',
-        });
+      // Try insert first, if duplicate then update
+      const { error: insertError } = await supabase
+        .from('student_profiles')
+        .insert(profileData);
+
+      if (insertError) {
+        // If duplicate user_id, update instead
+        if (insertError.code === '23505') {
+          const { error: updateError } = await supabase
+            .from('student_profiles')
+            .update(profileData)
+            .eq('user_id', user.id);
+          if (updateError) {
+            console.error('Profile update error:', updateError);
+          }
+        } else {
+          console.error('Profile insert error:', insertError);
+        }
       }
     } catch (err: any) {
       console.error('Submit error:', err);
