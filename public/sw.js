@@ -1,4 +1,4 @@
-// v2 - force kill all caches
+// v3 - passthrough with fallback, never block supabase
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', e => {
   e.waitUntil(
@@ -8,6 +8,7 @@ self.addEventListener('activate', e => {
   );
 });
 self.addEventListener('fetch', e => {
-  // No caching at all - always go to network
-  e.respondWith(fetch(e.request));
+  // Skip non-GET and supabase requests entirely - let browser handle them
+  if (e.request.method !== 'GET' || e.request.url.includes('supabase.co')) return;
+  e.respondWith(fetch(e.request).catch(() => new Response('', { status: 408 })));
 });
