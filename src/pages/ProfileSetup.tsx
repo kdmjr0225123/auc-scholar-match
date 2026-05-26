@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -25,9 +25,6 @@ const YEARS = [
   { value: '2030', label: 'Class of 2030' },
 ];
 
-// GPA values from 0.0 to 4.0 in 0.1 increments
-const GPA_VALUES = Array.from({ length: 41 }, (_, i) => (i * 0.1).toFixed(1));
-
 const STEPS = ['name', 'school', 'major', 'year', 'gpa', 'loading'];
 
 export default function ProfileSetup() {
@@ -39,7 +36,6 @@ export default function ProfileSetup() {
     first_name: '', last_name: '', school: '', major: '', graduation_year: '', gpa: '3.0',
   });
   const [majorSearch, setMajorSearch] = useState('');
-  const gpaRef = useRef<HTMLDivElement>(null);
 
   const currentStep = STEPS[step];
   const progress = (step / (STEPS.length - 1)) * 100;
@@ -52,29 +48,45 @@ export default function ProfileSetup() {
   };
 
   const handleSubmit = async () => {
+    // If no user session, send back to auth
     if (!user) {
+      toast({ variant: 'destructive', title: 'Session expired', description: 'Please sign in again.' });
       navigate('/auth');
       return;
     }
-    next(); // show loading immediately
+
+    next(); // show loading screen immediately
+
     try {
-      const { error } = await supabase.from('student_profiles').upsert({
-        user_id: user.id,
-        first_name: form.first_name || 'Student',
-        last_name: form.last_name || '',
-        email: user.email,
-        school: form.school,
-        major: form.major,
-        graduation_year: parseInt(form.graduation_year),
-        gpa: parseFloat(form.gpa),
-      });
+      const { error } = await supabase.from('student_profiles').upsert(
+        {
+          user_id: user.id,
+          first_name: form.first_name || 'Student',
+          last_name: form.last_name || '',
+          email: user.email,
+          school: form.school as 'morehouse' | 'spelman' | 'clark_atlanta' | 'morris_brown',
+          major: form.major,
+          graduation_year: parseInt(form.graduation_year),
+          gpa: parseFloat(form.gpa),
+        },
+        { onConflict: 'user_id' } // upsert on user_id so re-runs don't create duplicates
+      );
+
       if (error) {
         console.error('Profile upsert error:', error);
-        toast({ variant: 'destructive', title: 'Error saving profile', description: error.message });
+        // Still navigate to dashboard — don't leave user stuck on loading screen
+        // Dashboard will handle missing profile gracefully
+        toast({
+          variant: 'destructive',
+          title: 'Profile saved partially',
+          description: 'Some info may not have saved. You can update it later.',
+        });
       }
     } catch (err: any) {
       console.error('Submit error:', err);
+      // Same — don't trap the user on the loading screen
     } finally {
+      // Always navigate, with a short delay so the loading animation feels intentional
       setTimeout(() => navigate('/dashboard'), 1500);
     }
   };
@@ -122,7 +134,6 @@ export default function ProfileSetup() {
         .ob-question em { color: #E8B84B; font-style: normal; }
         .ob-sub { font-size: 0.85rem; color: rgba(255,255,255,0.3); margin-bottom: 2rem; }
 
-        /* SCHOOL */
         .ob-school-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
         .ob-school-btn {
           background: #111E2E; border: 1px solid rgba(255,255,255,0.07);
@@ -132,20 +143,8 @@ export default function ProfileSetup() {
         }
         .ob-school-btn.selected { border-color: rgba(232,184,75,0.5); background: rgba(232,184,75,0.08); }
         .ob-school-btn:active { transform: scale(0.97); }
-        .ob-school-logo {
-          width: 52px; height: 52px; border-radius: 50%;
-          object-fit: cover; background: rgba(255,255,255,0.05);
-          border: 2px solid rgba(255,255,255,0.08);
-        }
-        .ob-school-logo-fallback {
-          width: 52px; height: 52px; border-radius: 50%;
-          display: flex; align-items: center; justify-content: center;
-          font-size: 1.4rem; background: rgba(255,255,255,0.05);
-          border: 2px solid rgba(255,255,255,0.08);
-        }
         .ob-school-name { font-size: 0.82rem; font-weight: 700; color: #fff; font-family: 'Sora', sans-serif; line-height: 1.2; }
 
-        /* YEAR */
         .ob-year-list { display: flex; flex-direction: column; gap: 0.65rem; }
         .ob-year-btn { background: #111E2E; border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; padding: 1rem 1.25rem; cursor: pointer; display: flex; align-items: center; justify-content: space-between; transition: all 0.15s; }
         .ob-year-btn.selected { background: rgba(232,184,75,0.1); border-color: rgba(232,184,75,0.4); }
@@ -154,65 +153,6 @@ export default function ProfileSetup() {
         .ob-year-check { width: 20px; height: 20px; border-radius: 50%; background: rgba(255,255,255,0.05); border: 1.5px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; }
         .ob-year-btn.selected .ob-year-check { background: #E8B84B; border-color: #E8B84B; }
 
-        /* GPA SCROLL PICKER */
-        .ob-gpa-picker-wrap {
-          position: relative;
-          height: 200px;
-          overflow: hidden;
-          margin-bottom: 1.5rem;
-        }
-        .ob-gpa-picker-wrap::before,
-        .ob-gpa-picker-wrap::after {
-          content: '';
-          position: absolute; left: 0; right: 0; z-index: 2;
-          height: 72px; pointer-events: none;
-        }
-        .ob-gpa-picker-wrap::before {
-          top: 0;
-          background: linear-gradient(to bottom, #0A1628 0%, transparent 100%);
-        }
-        .ob-gpa-picker-wrap::after {
-          bottom: 0;
-          background: linear-gradient(to top, #0A1628 0%, transparent 100%);
-        }
-        .ob-gpa-selector {
-          position: absolute; top: 50%; left: 0; right: 0;
-          transform: translateY(-50%);
-          height: 48px; z-index: 1;
-          background: rgba(232,184,75,0.08);
-          border-top: 1px solid rgba(232,184,75,0.3);
-          border-bottom: 1px solid rgba(232,184,75,0.3);
-          pointer-events: none;
-        }
-        .ob-gpa-scroll {
-          display: flex; flex-direction: column;
-          height: 100%;
-          overflow-y: scroll;
-          scroll-snap-type: y mandatory;
-          scrollbar-width: none;
-          -webkit-overflow-scrolling: touch;
-        }
-        .ob-gpa-scroll::-webkit-scrollbar { display: none; }
-        .ob-gpa-item {
-          height: 48px;
-          display: flex; align-items: center; justify-content: center;
-          scroll-snap-align: center;
-          font-family: 'Sora', sans-serif;
-          font-size: 1.4rem; font-weight: 700;
-          color: rgba(255,255,255,0.3);
-          transition: color 0.1s;
-          cursor: pointer;
-          flex-shrink: 0;
-        }
-        .ob-gpa-item.active { color: #E8B84B; font-size: 1.6rem; }
-        .ob-gpa-spacer { height: 76px; flex-shrink: 0; }
-        .ob-gpa-display {
-          text-align: center; margin-bottom: 1rem;
-        }
-        .ob-gpa-num { font-family: 'Sora', sans-serif; font-size: 3rem; font-weight: 800; color: #E8B84B; letter-spacing: -0.03em; line-height: 1; }
-        .ob-gpa-label { font-size: 0.78rem; color: rgba(255,255,255,0.3); margin-top: 0.3rem; }
-
-        /* MAJOR */
         .ob-search { width: 100%; background: #111E2E; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 0.85rem 1rem; font-size: 0.88rem; color: #fff; font-family: 'DM Sans', sans-serif; outline: none; margin-bottom: 0.75rem; }
         .ob-search::placeholder { color: rgba(255,255,255,0.2); }
         .ob-search:focus { border-color: rgba(232,184,75,0.4); }
@@ -222,18 +162,15 @@ export default function ProfileSetup() {
         .ob-major-btn.selected { background: rgba(232,184,75,0.1); border-color: rgba(232,184,75,0.4); color: #fff; }
         .ob-major-btn:active { transform: scale(0.99); }
 
-        /* NAME */
         .ob-name-fields { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem; }
         .ob-input { width: 100%; background: #111E2E; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 0.95rem 1rem; font-size: 0.95rem; color: #fff; font-family: 'DM Sans', sans-serif; outline: none; transition: border-color 0.2s; }
         .ob-input::placeholder { color: rgba(255,255,255,0.2); }
         .ob-input:focus { border-color: rgba(232,184,75,0.4); }
 
-        /* CTA */
         .ob-cta { width: 100%; background: #E8B84B; color: #0A1628; border: none; border-radius: 12px; padding: 1rem; font-size: 0.95rem; font-weight: 700; cursor: pointer; font-family: 'DM Sans', sans-serif; letter-spacing: 0.01em; transition: transform 0.15s, opacity 0.15s; }
         .ob-cta:disabled { opacity: 0.4; cursor: not-allowed; }
         .ob-cta:active:not(:disabled) { transform: scale(0.98); }
 
-        /* LOADING */
         .ob-loading { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; gap: 1.5rem; padding: 2rem; text-align: center; }
         .ob-spinner { width: 48px; height: 48px; border: 3px solid rgba(232,184,75,0.15); border-top-color: #E8B84B; border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
