@@ -32,23 +32,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             fetchUserRole(session.user.id);
           }, 0);
 
-          // Handle OAuth redirect — check if user has a profile
-          if (event === 'SIGNED_IN') {
-            const { data: profile } = await supabase
-              .from('student_profiles')
-              .select('id')
-              .eq('user_id', session.user.id)
-              .maybeSingle();
-
-            const currentPath = window.location.pathname;
-            if (currentPath === '/' || currentPath === '/auth') {
-              if (profile) {
-                window.location.href = '/dashboard';
-              } else {
-                window.location.href = '/profile';
-              }
-            }
-          }
         } else {
           setUserRole(null);
         }
