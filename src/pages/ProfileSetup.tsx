@@ -48,7 +48,6 @@ export default function ProfileSetup() {
   };
 
   const handleSubmit = async () => {
-    // If no user session, send back to auth
     if (!user) {
       toast({ variant: 'destructive', title: 'Session expired', description: 'Please sign in again.' });
       navigate('/auth');
@@ -69,31 +68,25 @@ export default function ProfileSetup() {
         gpa: parseFloat(form.gpa),
       };
 
-      // Try insert first, if duplicate then update
       const { error: insertError } = await supabase
         .from('student_profiles')
         .insert(profileData);
 
       if (insertError) {
-        // If duplicate user_id, update instead
         if (insertError.code === '23505') {
           const { error: updateError } = await supabase
             .from('student_profiles')
             .update(profileData)
             .eq('user_id', user.id);
-          if (updateError) {
-            console.error('Profile update error:', updateError);
-          }
+          if (updateError) console.error('Profile update error:', updateError);
         } else {
           console.error('Profile insert error:', insertError);
         }
       }
     } catch (err: any) {
       console.error('Submit error:', err);
-      // Same — don't trap the user on the loading screen
     } finally {
-      // Always navigate, with a short delay so the loading animation feels intentional
-      setTimeout(() => navigate('/dashboard'), 1500);
+      window.location.href = '/dashboard';
     }
   };
 
