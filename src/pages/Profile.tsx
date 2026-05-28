@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -142,7 +142,7 @@ export default function Profile() {
 
       <div className="pr-bg">
         <div className="pr-header">
-          <button className="pr-back" onClick={() => navigate('/dashboard')}>←</button>
+          <button className="pr-back" onClick={() => { window.location.href = '/dashboard'; }}>?</button>
           <div className="pr-title">Edit Profile</div>
           <button className="pr-save" onClick={handleSave} disabled={saving}>
             {saving ? 'Saving...' : 'Save'}
@@ -212,3 +212,4 @@ export default function Profile() {
     </>
   );
 }
+
