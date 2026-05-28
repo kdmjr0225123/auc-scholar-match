@@ -38,7 +38,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    const sessionTimeout = setTimeout(() => setLoading(false), 3000);
+    console.log("[AUTH] starting getSession");
+    const sessionTimeout = setTimeout(() => { console.log("[AUTH] timeout fired"); console.log("[AUTH] setLoading false"); setLoading(false); }, 3000);
     supabase.auth.getSession().then(({ data: { session } }) => {
       clearTimeout(sessionTimeout);
       setSession(session);
@@ -46,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (session?.user) {
         fetchUserRole(session.user.id);
       }
-      setLoading(false);
+      console.log("[AUTH] setLoading false"); setLoading(false);
     });
 
     return () => subscription.unsubscribe();
@@ -97,5 +98,6 @@ export function useAuth() {
   }
   return context;
 }
+
 
 
