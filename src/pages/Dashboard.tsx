@@ -66,7 +66,7 @@ export default function Dashboard() {
       const { data: profileData, error: profileError } = await supabase
         .from('student_profiles').select('*').eq('user_id', user.id).maybeSingle();
       if (profileError) throw profileError;
-      if (!profileData) { navigate('/profile'); return; }
+      if (!profileData) { setLoading(false); return; }
       setProfile(profileData as StudentProfile);
 
       const { data: scholarshipsData, error: scholarshipsError } = await supabase
@@ -361,3 +361,4 @@ export default function Dashboard() {
     </>
   );
 }
+
