@@ -38,7 +38,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
+    const sessionTimeout = setTimeout(() => setLoading(false), 3000);
     supabase.auth.getSession().then(({ data: { session } }) => {
+      clearTimeout(sessionTimeout);
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -65,12 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signUp = async (email: string, password: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { emailRedirectTo: redirectUrl },
-    });
+    const { error } = await supabase.auth.signUp({ email, password });
     return { error };
   };
 
@@ -100,3 +97,5 @@ export function useAuth() {
   }
   return context;
 }
+
+
