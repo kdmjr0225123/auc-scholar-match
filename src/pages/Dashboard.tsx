@@ -61,6 +61,7 @@ export default function Dashboard() {
   }, [loading, matched.length]);
 
   const loadData = async () => {
+    const timeout = setTimeout(() => setLoading(false), 5000);
     if (!user) return;
     try {
       const { data: profileData, error: profileError } = await supabase
@@ -77,6 +78,7 @@ export default function Dashboard() {
     } catch (err: any) {
       toast({ variant: 'destructive', title: 'Error loading data', description: err.message });
     } finally {
+      clearTimeout(timeout);
       setLoading(false);
     }
   };
@@ -361,4 +363,5 @@ export default function Dashboard() {
     </>
   );
 }
+
 
