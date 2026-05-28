@@ -66,7 +66,7 @@ export default function Auth() {
           options: { data: { first_name: form.firstName, last_name: form.lastName } }
         });
         if (error) throw error;
-        if (data.user) navigate('/profile');
+        if (data.user) navigate('/profile-setup');
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email: form.email,
@@ -226,3 +226,4 @@ export default function Auth() {
     </>
   );
 }
+
