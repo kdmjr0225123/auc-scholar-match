@@ -43,7 +43,7 @@ export default function Profile() {
         .from('student_profiles')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
       if (data) {
         setForm({
           first_name: data.first_name || '',
@@ -212,4 +212,5 @@ export default function Profile() {
     </>
   );
 }
+
 
