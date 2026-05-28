@@ -43,7 +43,7 @@ export default function Auth() {
           .select('id')
           .eq('user_id', session.user.id)
           .maybeSingle();
-        navigate(profile ? '/dashboard' : '/profile');
+        navigate(profile ? '/dashboard' : '/profile-setup');
       }
     };
     checkSession();
@@ -226,4 +226,5 @@ export default function Auth() {
     </>
   );
 }
+
 
