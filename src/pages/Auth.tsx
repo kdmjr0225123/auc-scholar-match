@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 
 type Mode = 'signup' | 'signin';
@@ -28,7 +28,8 @@ const StepLine = ({ done }: { done: boolean }) => (
 );
 
 export default function Auth() {
-  const [mode, setMode] = useState<Mode>('signup');
+  const [searchParams] = useSearchParams();
+  const [mode, setMode] = useState<Mode>(searchParams.get('mode') === 'signin' ? 'signin' : 'signup');
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', password: '' });
   const { toast } = useToast();
