@@ -106,7 +106,7 @@ export default function Profile() {
         * { box-sizing: border-box; margin: 0; padding: 0; }
         .pr-bg { min-height: 100vh; min-height: 100dvh; background: #0A1628; font-family: 'DM Sans', sans-serif; padding-bottom: 3rem; }
         .pr-header { padding: calc(env(safe-area-inset-top, 0px) + 1rem) 1.5rem 1rem; display: flex; align-items: center; gap: 1rem; border-bottom: 1px solid rgba(255,255,255,0.06); }
-        .pr-back { background: none; border: none; color: rgba(255,255,255,0.4); cursor: pointer; font-size: 1.4rem; line-height: 1; padding: 0; }
+        .pr-back { background: none; border: none; color: rgba(255,255,255,0.4); cursor: pointer; font-size: 0.82rem; font-family: 'DM Sans', sans-serif; line-height: 1; padding: 0.25rem 0; }
         .pr-back:hover { color: #fff; }
         .pr-title { font-family: 'Sora', sans-serif; font-size: 1.1rem; font-weight: 800; color: #fff; letter-spacing: -0.02em; }
         .pr-save { margin-left: auto; background: #E8B84B; color: #0A1628; border: none; border-radius: 10px; padding: 0.55rem 1.1rem; font-size: 0.85rem; font-weight: 700; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: opacity 0.15s; }
@@ -142,7 +142,7 @@ export default function Profile() {
 
       <div className="pr-bg">
         <div className="pr-header">
-          <button className="pr-back" onClick={() => { window.location.href = '/dashboard'; }}>?</button>
+          <button className="pr-back" onClick={() => { window.location.href = '/dashboard'; }}>← Back</button>
           <div className="pr-title">Edit Profile</div>
           <button className="pr-save" onClick={handleSave} disabled={saving}>
             {saving ? 'Saving...' : 'Save'}

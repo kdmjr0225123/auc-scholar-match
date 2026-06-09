@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -42,9 +42,15 @@ export default function ProfileSetup() {
 
   const next = () => setStep(s => Math.min(s + 1, STEPS.length - 1));
 
+  const selectingRef = useRef(false);
   const select = (key: string, value: string) => {
+    if (selectingRef.current) return;
+    selectingRef.current = true;
     setForm(f => ({ ...f, [key]: value }));
-    setTimeout(() => next(), 220);
+    setTimeout(() => {
+      next();
+      selectingRef.current = false;
+    }, 280);
   };
 
   const handleSubmit = async () => {
@@ -55,6 +61,7 @@ export default function ProfileSetup() {
     }
 
     next(); // show loading screen immediately
+    const startTime = Date.now();
 
     try {
       const profileData = {
@@ -78,15 +85,22 @@ export default function ProfileSetup() {
             .from('student_profiles')
             .update(profileData)
             .eq('user_id', user.id);
-          if (updateError) console.error('Profile update error:', updateError);
+          if (updateError) throw updateError;
         } else {
-          console.error('Profile insert error:', insertError);
+          throw insertError;
         }
       }
+
+      // Ensure loading screen shows for at least 1.5s before redirect
+      const elapsed = Date.now() - startTime;
+      const remaining = Math.max(0, 1500 - elapsed);
+      await new Promise(resolve => setTimeout(resolve, remaining));
+
+      navigate('/dashboard');
     } catch (err: any) {
       console.error('Submit error:', err);
-    } finally {
-      window.location.href = '/dashboard';
+      toast({ variant: 'destructive', title: 'Something went wrong', description: 'Could not save your profile. Please try again.' });
+      setStep(STEPS.indexOf('gpa'));
     }
   };
 

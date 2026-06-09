@@ -43,6 +43,7 @@ export default function Dashboard() {
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [matched, setMatched] = useState<MatchedScholarship[]>([]);
   const [revealed, setRevealed] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const bannerRef = useRef<HTMLDivElement>(null);
 
   const totalAvailable = matched.reduce((s, m) => s + (m.award_amount || 0), 0);
@@ -254,11 +255,13 @@ export default function Dashboard() {
         }
         .dc-apply:hover { background: #2d1b69; transform: translateY(-1px); }
         .dc-view {
-          width: 100%; background: #f8f8f8; color: #999;
+          width: 100%; background: #f8f8f8; color: #555;
           border: 1px solid #eee; border-radius: 9px; padding: 0.65rem;
           font-size: 0.8rem; font-weight: 600; cursor: pointer;
           font-family: 'DM Sans', sans-serif; margin-top: auto;
+          transition: background 0.15s, color 0.15s;
         }
+        .dc-view:hover { background: #f0f0f0; color: #333; }
 
         /* EMPTY */
         .dash-empty { text-align: center; padding: 4rem 2rem; }
@@ -349,9 +352,26 @@ export default function Dashboard() {
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/></svg>
                       </a>
                     ) : (
-                      <a className="dc-view" href={s.application_url} target="_blank" rel="noopener noreferrer">
-                        View Details
-                      </a>
+                      <>
+                        <button
+                          className="dc-view"
+                          onClick={() => setExpandedId(expandedId === s.id ? null : s.id)}
+                        >
+                          {expandedId === s.id ? 'Hide Details ↑' : 'View Details ↓'}
+                        </button>
+                        {expandedId === s.id && s.application_url && (
+                          <a
+                            className="dc-apply"
+                            href={s.application_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ marginTop: '0.5rem', background: '#555' }}
+                          >
+                            Visit Application Site
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/></svg>
+                          </a>
+                        )}
+                      </>
                     )}
                   </div>
                 ))}
