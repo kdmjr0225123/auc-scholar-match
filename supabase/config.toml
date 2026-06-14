@@ -1,1 +1,33 @@
 project_id = "swvfmitxxjrjuizaqvsn"
+[functions.notify-new-scholarship]
+enabled = true
+verify_jwt = false
+import_map = "./functions/notify-new-scholarship/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/notify-new-scholarship/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/notify-new-scholarship/*.html" ]
+
+[functions.scholarship-reminders]
+enabled = true
+verify_jwt = false
+import_map = "./functions/scholarship-reminders/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/scholarship-reminders/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/scholarship-reminders/*.html" ]
+
+[functions.scholarship-quality-check]
+enabled = true
+verify_jwt = false
+import_map = "./functions/scholarship-quality-check/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/scholarship-quality-check/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/scholarship-quality-check/*.html" ]

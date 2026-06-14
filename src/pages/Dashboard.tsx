@@ -94,7 +94,7 @@ export default function Dashboard() {
       let metCriteria = 0;
 
       totalCriteria++;
-      const schoolMatch = rules.eligible_schools?.length === 0 || rules.eligible_schools?.includes(profile.school);
+      const schoolMatch = !rules.eligible_schools || rules.eligible_schools.length === 0 || rules.eligible_schools.includes(profile.school);
       if (!schoolMatch) return null;
       metCriteria++;
       matchReasons.push(`✓ School: ${formatSchool(profile.school)} is eligible`);
@@ -383,5 +383,6 @@ export default function Dashboard() {
     </>
   );
 }
+
 
 
