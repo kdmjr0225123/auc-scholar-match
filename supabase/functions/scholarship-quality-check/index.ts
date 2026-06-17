@@ -17,6 +17,38 @@ const MIN_MONTHS_REMAINING = 2;
 const FETCH_TIMEOUT_MS = 9000;
 const MIN_DESCRIPTION_LENGTH = 40;
 
+// Third-party scholarship discovery/listing sites. A link to one of these
+// is, by definition, not a direct link to the sponsor's own application —
+// it's a database page that talks ABOUT the scholarship, often with a
+// generic /scholarships/ browse URL rather than anything specific. This
+// list is a starting set based on known offenders, not exhaustive.
+const AGGREGATOR_DOMAINS = [
+  "scholarships360.org",
+  "scholarships.com",
+  "niche.com",
+  "unigo.com",
+  "cappex.com",
+  "fastweb.com",
+  "scholarshipowl.com",
+  "studentscholarships.org",
+];
+
+// Phrases that indicate a scholarship isn't actually open for applications
+// right now, even if its deadline field is comfortably in the future —
+// e.g. a description that says the next cycle hasn't started yet.
+const NOT_CURRENTLY_OPEN_PHRASES = [
+  "next cycle opens",
+  "applications open in",
+  "applications will open",
+  "opening soon",
+  "coming soon",
+  "check back",
+  "currently closed",
+  "applications are closed",
+  "no longer accepting applications",
+  "not currently accepting",
+];
+
 const CAPTCHA_MARKERS = [
   "captcha",
   "are you a human",
@@ -97,6 +129,11 @@ function checkDescription(description: string | null): { ok: boolean; reason?: s
   if (description.trim().length < MIN_DESCRIPTION_LENGTH) {
     return { ok: false, reason: `Description too thin (${description.trim().length} chars, need ${MIN_DESCRIPTION_LENGTH}+)` };
   }
+  const lower = description.toLowerCase();
+  const closedPhrase = NOT_CURRENTLY_OPEN_PHRASES.find((p) => lower.includes(p));
+  if (closedPhrase) {
+    return { ok: false, reason: `Description indicates it isn't currently open ("${closedPhrase}")` };
+  }
   return { ok: true };
 }
 
@@ -110,6 +147,13 @@ async function checkLink(url: string | null): Promise<{ ok: boolean; status: str
     originalHost = new URL(url).hostname;
   } catch {
     return { ok: false, status: "broken", reason: "Malformed application URL" };
+  }
+
+  const isAggregator = AGGREGATOR_DOMAINS.some(
+    (domain) => originalHost === domain || originalHost.endsWith(`.${domain}`),
+  );
+  if (isAggregator) {
+    return { ok: false, status: "aggregator", reason: `Points to a third-party listing site (${originalHost}), not the sponsor's direct application page` };
   }
 
   const controller = new AbortController();

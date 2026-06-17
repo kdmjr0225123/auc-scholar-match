@@ -58,6 +58,7 @@ const LINK_BADGE: Record<string, { label: string; className: string }> = {
   captcha: { label: 'Captcha Wall', className: 'bg-orange-100 text-orange-800 border-orange-200' },
   timeout: { label: 'Link Timeout', className: 'bg-gray-100 text-gray-700 border-gray-200' },
   unchecked: { label: 'Link Unchecked', className: 'bg-slate-100 text-slate-600 border-slate-200' },
+  aggregator: { label: 'Third-Party Listing', className: 'bg-purple-100 text-purple-800 border-purple-200' },
 };
 
 interface ScholarshipWithRules extends Scholarship {

@@ -23,7 +23,7 @@ export interface StudentProfile {
 }
 
 export type PipelineStatus = 'pending' | 'approved' | 'quarantined';
-export type LinkStatus = 'unchecked' | 'ok' | 'broken' | 'redirected' | 'captcha' | 'timeout';
+export type LinkStatus = 'unchecked' | 'ok' | 'broken' | 'redirected' | 'captcha' | 'timeout' | 'aggregator';
 
 export interface Scholarship {
   id: string;
