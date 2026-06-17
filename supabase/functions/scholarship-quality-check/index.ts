@@ -47,6 +47,7 @@ interface EligibilityRule {
 
 interface RunResult {
   scholarship_id: string;
+  scholarship_name: string;
   passed: boolean;
   link_status: string;
   reason: string;
@@ -74,9 +75,9 @@ function checkDeadline(deadline: string | null): { ok: boolean; reason?: string 
 
 // Gate 2: must resolve to at least one of the 4 niched schools, or be open.
 function checkSchoolEligibility(rules: EligibilityRule | null): { ok: boolean; reason?: string } {
-  if (!rules) return { ok: true }; // handled by ensureEligibilityRules before this runs
+  if (!rules) return { ok: true };
   const schools = rules.eligible_schools ?? [];
-  if (schools.length === 0) return { ok: true }; // open to all, includes our 4
+  if (schools.length === 0) return { ok: true };
   const overlaps = schools.some((s) => HBCU_SCHOOLS.includes(s));
   if (!overlaps) {
     return { ok: false, reason: `Eligible schools (${schools.join(", ")}) don't include Morehouse, Spelman, Clark Atlanta, or Morris Brown` };
@@ -138,7 +139,7 @@ async function checkLink(url: string | null): Promise<{ ok: boolean; status: str
     }
 
     // Same-host redirect to bare root is a softer signal of a dead deep
-    // link (e.g. /scholarships/123 -> /), still worth quarantining.
+    // link (e.g. /scholarships/123 -> /), still worth removing.
     if (finalPath === "" || finalPath === "/") {
       const originalPath = (() => {
         try {
@@ -250,21 +251,30 @@ serve(async () => {
     } else {
       if (deadlinePassed) deactivated++;
       else quarantined++;
-      await supabase
-        .from("scholarships")
-        .update({
-          is_active: false,
-          pipeline_status: "quarantined",
-          quarantine_reason: failures.join(" | "),
-          link_status: linkCheck.status,
-          link_checked_at: new Date().toISOString(),
-        })
-        .eq("id", scholarship.id);
       noteLines.push(`${scholarship.name}: ${failures.join(" | ")}`);
+
+      // Log the audit record BEFORE deleting — pipeline_runs.scholarship_id
+      // is ON DELETE SET NULL specifically so this history survives the
+      // scholarship's removal, with scholarship_name denormalized here so
+      // "what was this and why did it go" stays answerable afterward.
+      await supabase.from("pipeline_runs").insert({
+        scholarship_id: scholarship.id,
+        scholarship_name: scholarship.name,
+        passed: false,
+        link_status: linkCheck.status,
+        reason: failures.join(" | "),
+      });
+
+      // Hard delete rather than soft-quarantine: a scholarship that fails
+      // any gate should not linger in the inventory at all. Cascades to
+      // its eligibility_rules row automatically.
+      await supabase.from("scholarships").delete().eq("id", scholarship.id);
+      continue;
     }
 
     runResults.push({
       scholarship_id: scholarship.id,
+      scholarship_name: scholarship.name,
       passed,
       link_status: linkCheck.status,
       reason: passed ? "Passed all gates" : failures.join(" | "),
@@ -275,6 +285,7 @@ serve(async () => {
     await supabase.from("pipeline_runs").insert(
       runResults.map((r) => ({
         scholarship_id: r.scholarship_id,
+        scholarship_name: r.scholarship_name,
         passed: r.passed,
         link_status: r.link_status,
         reason: r.reason,
