@@ -15,6 +15,7 @@ const HBCU_SCHOOLS = ["morehouse", "spelman", "clark_atlanta", "morris_brown"];
 
 const MIN_MONTHS_REMAINING = 2;
 const FETCH_TIMEOUT_MS = 9000;
+const MIN_DESCRIPTION_LENGTH = 40;
 
 const CAPTCHA_MARKERS = [
   "captcha",
@@ -81,6 +82,20 @@ function checkSchoolEligibility(rules: EligibilityRule | null): { ok: boolean; r
   const overlaps = schools.some((s) => HBCU_SCHOOLS.includes(s));
   if (!overlaps) {
     return { ok: false, reason: `Eligible schools (${schools.join(", ")}) don't include Morehouse, Spelman, Clark Atlanta, or Morris Brown` };
+  }
+  return { ok: true };
+}
+
+// Gate 4: description must be a real, substantive write-up — not blank,
+// not a placeholder stub. A scholarship is only worth surfacing if a
+// student can actually tell what it is and what's required from the
+// listing itself.
+function checkDescription(description: string | null): { ok: boolean; reason?: string } {
+  if (!description || description.trim().length === 0) {
+    return { ok: false, reason: "Missing description" };
+  }
+  if (description.trim().length < MIN_DESCRIPTION_LENGTH) {
+    return { ok: false, reason: `Description too thin (${description.trim().length} chars, need ${MIN_DESCRIPTION_LENGTH}+)` };
   }
   return { ok: true };
 }
@@ -221,6 +236,7 @@ serve(async () => {
 
     const deadlineCheck = checkDeadline(scholarship.deadline);
     const schoolCheck = checkSchoolEligibility(rules);
+    const descriptionCheck = checkDescription(scholarship.description);
 
     // Don't bother validating the link if the deadline has already fully
     // passed — that's terminal regardless of what the URL does.
@@ -229,7 +245,7 @@ serve(async () => {
       ? { ok: false, status: "unchecked", reason: undefined as string | undefined }
       : await checkLink(scholarship.application_url);
 
-    const failures = [deadlineCheck, schoolCheck, linkCheck]
+    const failures = [deadlineCheck, schoolCheck, descriptionCheck, linkCheck]
       .filter((c) => !c.ok)
       .map((c) => c.reason)
       .filter(Boolean) as string[];
