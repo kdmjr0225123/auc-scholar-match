@@ -45,6 +45,21 @@ const SCHOOLS: { value: School; label: string }[] = [
   { value: 'morris_brown', label: 'Morris Brown' },
 ];
 
+const PIPELINE_BADGE: Record<string, { label: string; className: string }> = {
+  approved: { label: 'Pipeline: Approved', className: 'bg-green-100 text-green-800 border-green-200' },
+  quarantined: { label: 'Pipeline: Quarantined', className: 'bg-red-100 text-red-800 border-red-200' },
+  pending: { label: 'Pipeline: Pending', className: 'bg-blue-100 text-blue-800 border-blue-200' },
+};
+
+const LINK_BADGE: Record<string, { label: string; className: string }> = {
+  ok: { label: 'Link OK', className: 'bg-green-100 text-green-800 border-green-200' },
+  broken: { label: 'Link Broken', className: 'bg-red-100 text-red-800 border-red-200' },
+  redirected: { label: 'Link Redirected', className: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
+  captcha: { label: 'Captcha Wall', className: 'bg-orange-100 text-orange-800 border-orange-200' },
+  timeout: { label: 'Link Timeout', className: 'bg-gray-100 text-gray-700 border-gray-200' },
+  unchecked: { label: 'Link Unchecked', className: 'bg-slate-100 text-slate-600 border-slate-200' },
+};
+
 interface ScholarshipWithRules extends Scholarship {
   eligibility_rules: EligibilityRule | null;
 }
@@ -81,6 +96,20 @@ export default function Admin() {
 
   useEffect(() => {
     loadScholarships();
+
+    const channel = supabase
+      .channel('admin-scholarships-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'scholarships' }, () => {
+        loadScholarships();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'eligibility_rules' }, () => {
+        loadScholarships();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
 
@@ -593,7 +622,22 @@ export default function Admin() {
                         {scholarship.eligibility_rules?.min_gpa && (
                           <Badge variant="outline">Min GPA: {scholarship.eligibility_rules.min_gpa}</Badge>
                         )}
+                        {scholarship.pipeline_status && (
+                          <Badge className={PIPELINE_BADGE[scholarship.pipeline_status]?.className}>
+                            {PIPELINE_BADGE[scholarship.pipeline_status]?.label ?? scholarship.pipeline_status}
+                          </Badge>
+                        )}
+                        {scholarship.link_status && (
+                          <Badge className={LINK_BADGE[scholarship.link_status]?.className}>
+                            {LINK_BADGE[scholarship.link_status]?.label ?? scholarship.link_status}
+                          </Badge>
+                        )}
                       </div>
+                      {scholarship.quarantine_reason && (
+                        <p className="text-xs text-destructive mt-2">
+                          Quarantined: {scholarship.quarantine_reason}
+                        </p>
+                      )}
                     </CardContent>
                   </Card>
                 ))

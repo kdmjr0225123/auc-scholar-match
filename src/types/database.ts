@@ -22,6 +22,9 @@ export interface StudentProfile {
   updated_at: string;
 }
 
+export type PipelineStatus = 'pending' | 'approved' | 'quarantined';
+export type LinkStatus = 'unchecked' | 'ok' | 'broken' | 'redirected' | 'captcha' | 'timeout';
+
 export interface Scholarship {
   id: string;
   name: string;
@@ -33,6 +36,10 @@ export interface Scholarship {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  pipeline_status: PipelineStatus | null;
+  link_status: LinkStatus | null;
+  link_checked_at: string | null;
+  quarantine_reason: string | null;
 }
 
 export interface EligibilityRule {

@@ -55,6 +55,24 @@ export default function Dashboard() {
   }, [user]);
 
   useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('dashboard-scholarship-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'scholarships' }, () => {
+        loadData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'eligibility_rules' }, () => {
+        loadData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  useEffect(() => {
     if (!loading && matched.length > 0) {
       const t = setTimeout(() => setRevealed(true), 300);
       return () => clearTimeout(t);
