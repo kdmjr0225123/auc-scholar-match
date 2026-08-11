@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -104,7 +104,7 @@ const PROOF = [
 export default function Landing() {
   const navigate = useNavigate();
   const [visible, setVisible] = useState(false);
-  const [stats, setStats] = useState({ scholarships: 12, totalMatched: 125000, students: 38 });
+  const [stats, setStats] = useState({ scholarships: 0, totalMatched: 0, students: 0 });
   const heroRef = useRef<HTMLDivElement>(null);
   const count = useCounter(stats.totalMatched, 2000, visible);
 
@@ -115,15 +115,18 @@ export default function Landing() {
 
   useEffect(() => {
     const fetchStats = async () => {
-      const [{ data: schData }, { data: stuData }] = await Promise.all([
+      const [{ data: schData }, { count: studentCount }] = await Promise.all([
         supabase.from('scholarships').select('award_amount').eq('is_active', true),
         supabase.from('student_profiles').select('id', { count: 'exact', head: true }),
       ]);
       if (schData) {
         const total = schData.reduce((s: number, r: any) => s + (r.award_amount || 0), 0);
-        // Use a minimum floor so the counter always looks credible in demos
-        const displayTotal = Math.max(total, 125000);
-        setStats(prev => ({ ...prev, scholarships: schData.length, totalMatched: displayTotal }));
+        setStats(prev => ({
+          ...prev,
+          scholarships: schData.length,
+          totalMatched: total,
+          students: studentCount ?? prev.students,
+        }));
       }
     };
     fetchStats();
