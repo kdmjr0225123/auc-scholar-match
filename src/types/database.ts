@@ -13,11 +13,26 @@ export type School = 'morehouse' | 'spelman' | 'clark_atlanta' | 'morris_brown';
 export interface StudentProfile {
   id: string;
   user_id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
   school: School;
   gpa: number;
   major: string;
   graduation_year: number;
   resume_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ApplicationStatus = 'saved' | 'applied' | 'completed';
+
+export interface StudentApplication {
+  id: string;
+  user_id: string;
+  scholarship_id: string;
+  status: ApplicationStatus;
+  applied_at: string;
   created_at: string;
   updated_at: string;
 }
@@ -84,6 +99,11 @@ export interface Database {
         Row: UserRole;
         Insert: Omit<UserRole, 'id'> & { id?: string; };
         Update: Partial<UserRole>;
+      };
+      student_applications: {
+        Row: StudentApplication;
+        Insert: Omit<StudentApplication, 'id' | 'applied_at' | 'created_at' | 'updated_at'> & { id?: string; applied_at?: string; created_at?: string; updated_at?: string; };
+        Update: Partial<StudentApplication>;
       };
     };
     Enums: {

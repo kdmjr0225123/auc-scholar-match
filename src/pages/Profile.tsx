@@ -1,11 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Link } from 'react-router-dom';
 import '@/styles/elevaid.css';
-import { ArrowLeft, Check, Star, User } from 'lucide-react';
+import { ArrowLeft, Check, Star, User, Upload, FileText, X, Loader2 } from 'lucide-react';
 import { SCHOOL_THEME, getSchoolTheme } from '@/lib/schoolTheme';
+
+const RESUME_MAX_BYTES = 8 * 1024 * 1024; // 8MB
+const RESUME_ACCEPT_EXT = ['pdf', 'doc', 'docx'];
 
 const SCHOOLS = Object.values(SCHOOL_THEME);
 
@@ -32,6 +35,9 @@ export default function Profile() {
   const [form, setForm] = useState({
     first_name: '', last_name: '', school: '', major: '', graduation_year: '', gpa: '3.0',
   });
+  const [resumePath, setResumePath] = useState<string | null>(null);
+  const [resumeBusy, setResumeBusy] = useState(false);
+  const resumeInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -50,12 +56,93 @@ export default function Profile() {
           graduation_year: data.graduation_year?.toString() || '',
           gpa: data.gpa?.toString() || '3.0',
         });
+        setResumePath(data.resume_url || null);
       }
       if (error) console.error('Error fetching profile:', error);
       setLoading(false);
     };
     fetchProfile();
   }, [user]);
+
+  // Resume-on-file: stored at a stable path per user (`{user_id}/resume.<ext>`)
+  // so re-uploading naturally replaces the old file via `upsert`, and the
+  // student never has to re-attach a resume for each individual application.
+  // This is also the groundwork for the upcoming resume-review tool, which
+  // will read from this same stored file.
+  const handleResumeSelect = async (file: File | undefined | null) => {
+    if (!file || !user) return;
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
+    if (!RESUME_ACCEPT_EXT.includes(ext)) {
+      toast({ variant: 'destructive', title: 'Unsupported file type', description: 'Please upload a PDF, DOC, or DOCX file.' });
+      return;
+    }
+    if (file.size > RESUME_MAX_BYTES) {
+      toast({ variant: 'destructive', title: 'File too large', description: 'Resumes must be under 8MB.' });
+      return;
+    }
+
+    setResumeBusy(true);
+    try {
+      const newPath = `${user.id}/resume.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from('resumes')
+        .upload(newPath, file, { upsert: true, contentType: file.type || undefined });
+      if (uploadError) throw uploadError;
+
+      // Best-effort cleanup if the previous resume had a different extension
+      // (upsert only overwrites when the path matches exactly).
+      if (resumePath && resumePath !== newPath) {
+        await supabase.storage.from('resumes').remove([resumePath]);
+      }
+
+      const { error: updateError } = await supabase
+        .from('student_profiles')
+        .update({ resume_url: newPath })
+        .eq('user_id', user.id);
+      if (updateError) throw updateError;
+
+      setResumePath(newPath);
+      toast({ title: 'Resume saved', description: 'It’s now on file for every application.' });
+    } catch (err: any) {
+      console.error('Resume upload error:', err);
+      toast({ variant: 'destructive', title: 'Error uploading resume', description: 'Please try again.' });
+    } finally {
+      setResumeBusy(false);
+      if (resumeInputRef.current) resumeInputRef.current.value = '';
+    }
+  };
+
+  const handleResumeView = async () => {
+    if (!resumePath) return;
+    const { data, error } = await supabase.storage.from('resumes').createSignedUrl(resumePath, 3600);
+    if (error || !data?.signedUrl) {
+      toast({ variant: 'destructive', title: 'Error opening resume', description: 'Please try again.' });
+      return;
+    }
+    window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleResumeRemove = async () => {
+    if (!user || !resumePath) return;
+    setResumeBusy(true);
+    try {
+      await supabase.storage.from('resumes').remove([resumePath]);
+      const { error } = await supabase
+        .from('student_profiles')
+        .update({ resume_url: null })
+        .eq('user_id', user.id);
+      if (error) throw error;
+      setResumePath(null);
+      toast({ title: 'Resume removed' });
+    } catch (err: any) {
+      console.error('Resume remove error:', err);
+      toast({ variant: 'destructive', title: 'Error removing resume', description: 'Please try again.' });
+    } finally {
+      setResumeBusy(false);
+    }
+  };
+
+  const resumeExt = resumePath ? (resumePath.split('.').pop() || '').toUpperCase() : null;
 
   const handleSave = async () => {
     if (!user) return;
@@ -129,6 +216,34 @@ export default function Profile() {
         .pr-gpa-display { text-align: center; margin: 0.5rem 0 1rem; }
         .pr-gpa-number { font-family: var(--ev-font-display); font-size: 2.75rem; font-weight: 700; color: var(--ev-gold); letter-spacing: -0.03em; line-height: 1; }
         .pr-gpa-sub { font-size: 0.75rem; color: var(--ev-text-faint); margin-top: 0.25rem; }
+
+        .pr-resume-hint { font-size: 0.78rem; color: var(--ev-text-faint); line-height: 1.5; }
+        .pr-resume-drop {
+          border: 1.5px dashed var(--ev-border-strong); border-radius: var(--ev-radius-lg);
+          padding: 1.5rem 1rem; text-align: center; cursor: pointer; background: var(--ev-surface);
+          display: flex; flex-direction: column; align-items: center; gap: 0.5rem; transition: all 0.15s;
+        }
+        .pr-resume-drop:hover { border-color: var(--ev-gold-border); background: var(--ev-gold-soft); }
+        .pr-resume-drop-label { font-size: 0.85rem; font-weight: 600; color: #fff; }
+        .pr-resume-drop-sub { font-size: 0.72rem; color: var(--ev-text-faint); }
+        .pr-resume-file {
+          display: flex; align-items: center; gap: 0.75rem; border: 1px solid var(--ev-border);
+          background: var(--ev-surface); border-radius: var(--ev-radius-lg); padding: 0.9rem 1rem;
+        }
+        .pr-resume-icon {
+          width: 38px; height: 38px; border-radius: var(--ev-radius-md); background: var(--ev-gold-soft);
+          color: var(--ev-gold); display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .pr-resume-name { font-size: 0.85rem; font-weight: 700; color: #fff; }
+        .pr-resume-status { font-size: 0.72rem; color: var(--ev-success); }
+        .pr-resume-actions { display: flex; gap: 0.5rem; margin-left: auto; flex-shrink: 0; }
+        .pr-resume-action {
+          background: none; border: 1px solid var(--ev-border); border-radius: var(--ev-radius-sm);
+          padding: 0.4rem 0.6rem; cursor: pointer; color: var(--ev-text-muted); display: inline-flex;
+          align-items: center; gap: 0.3rem; font-size: 0.72rem; font-weight: 600; transition: all 0.15s;
+        }
+        .pr-resume-action:hover { color: #fff; border-color: var(--ev-border-strong); }
+        .pr-resume-action.danger:hover { color: var(--ev-danger); border-color: var(--ev-danger); }
 
         .pr-tabbar { display: none; }
         @media (max-width: 680px) {
@@ -248,6 +363,47 @@ export default function Profile() {
                 {['0.0', '1.0', '2.0', '3.0', '4.0'].map(v => <span key={v} style={{ fontSize: '0.7rem', color: 'var(--ev-text-faint)' }}>{v}</span>)}
               </div>
             </div>
+          </div>
+
+          <hr className="ev-divider-dark" />
+
+          <div className="pr-section">
+            <div className="ev-label">Resume</div>
+            <div className="pr-resume-hint">
+              Keep one resume on file so you don't have to attach it every time you apply. We'll also use this for the upcoming resume review tool.
+            </div>
+            <input
+              ref={resumeInputRef}
+              id="p-resume"
+              type="file"
+              accept=".pdf,.doc,.docx"
+              className="sr-only"
+              onChange={e => handleResumeSelect(e.target.files?.[0])}
+            />
+            {resumePath ? (
+              <div className="pr-resume-file">
+                <div className="pr-resume-icon"><FileText size={18} /></div>
+                <div>
+                  <div className="pr-resume-name">Resume{resumeExt ? `.${resumeExt.toLowerCase()}` : ''}</div>
+                  <div className="pr-resume-status">On file</div>
+                </div>
+                <div className="pr-resume-actions">
+                  <button type="button" className="pr-resume-action" onClick={handleResumeView} disabled={resumeBusy}>View</button>
+                  <button type="button" className="pr-resume-action" onClick={() => resumeInputRef.current?.click()} disabled={resumeBusy}>
+                    {resumeBusy ? <Loader2 size={12} className="animate-spin" /> : 'Replace'}
+                  </button>
+                  <button type="button" className="pr-resume-action danger" onClick={handleResumeRemove} disabled={resumeBusy}>
+                    <X size={12} />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <label htmlFor="p-resume" className="pr-resume-drop">
+                {resumeBusy ? <Loader2 size={20} className="animate-spin" style={{ color: 'var(--ev-gold)' }} /> : <Upload size={20} style={{ color: 'var(--ev-gold)' }} />}
+                <div className="pr-resume-drop-label">{resumeBusy ? 'Uploading…' : 'Upload your resume'}</div>
+                <div className="pr-resume-drop-sub">PDF, DOC, or DOCX — up to 8MB</div>
+              </label>
+            )}
           </div>
         </div>
 
