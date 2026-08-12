@@ -99,7 +99,7 @@ export default function StudentProfilesView() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-accent" />
+        <Loader2 className="h-8 w-8 animate-spin" style={{ color: '#8A6810' }} />
       </div>
     );
   }
@@ -126,7 +126,7 @@ export default function StudentProfilesView() {
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
                     <CardTitle className="flex items-center gap-2 text-lg">
-                      <User className="h-4 w-4 text-accent" />
+                      <User className="h-4 w-4" style={{ color: '#8A6810' }} />
                       {getFullName(profile)}
                     </CardTitle>
                     {profile.email && (
@@ -207,14 +207,18 @@ export default function StudentProfilesView() {
                     <div className="flex items-center justify-between">
                       <div className="text-xs text-muted-foreground">
                         <p className="font-medium text-foreground mb-1">Resume Available</p>
-                        <p>{getFullName(profile)} • {profile.email || 'No email'}</p>
+                        <p>{getFullName(profile)} â€¢ {profile.email || 'No email'}</p>
                         <p className="font-mono text-[10px]">{profile.user_id}</p>
                       </div>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => handleDownloadResume(profile)}
-                        className="text-accent hover:text-accent/80"
+                        // Raw gold (text-accent) on this button's white/near-white
+                        // background is ~1.8:1 â€” fails WCAG AA badly. Same darker
+                        // gold used site-wide for gold-on-light text (elevaid.css
+                        // --ev-gold-600), which clears 5:1+.
+                        style={{ color: '#8A6810' }}
                       >
                         <FileText className="h-4 w-4 mr-1" />
                         Download

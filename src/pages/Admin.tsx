@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import '@/styles/elevaid.css';
 import { supabase } from '@/integrations/supabase/client';
 import { Scholarship, EligibilityRule, School } from '@/types/database';
 import { Button } from '@/components/ui/button';
@@ -287,7 +288,7 @@ export default function Admin() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-accent" />
+        <Loader2 className="h-8 w-8 animate-spin" style={{ color: '#8A6810' }} />
       </div>
     );
   }
@@ -295,25 +296,24 @@ export default function Admin() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link to="/dashboard">
-              <Button variant="ghost" size="sm">
-                <ArrowLeft className="h-4 w-4 mr-1" />
-                Back
-              </Button>
-            </Link>
-            <div className="flex items-center gap-2">
-              <GraduationCap className="h-8 w-8 text-accent" />
-              <span className="font-display text-2xl font-bold text-primary">Admin</span>
-            </div>
-          </div>
-          <Button onClick={() => { resetForm(); setShowForm(true); }}>
-            <Plus className="h-4 w-4 mr-1" />
-            Add Scholarship
-          </Button>
+      <header className="ev-nav ev-nav-light">
+        <div className="flex items-center gap-4">
+          <Link to="/dashboard">
+            <Button variant="ghost" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Back
+            </Button>
+          </Link>
+          <Link className="ev-logo" to="/" style={{ color: 'var(--ev-ink)' }}>
+            <span className="ev-logo-mark"><GraduationCap size={15} strokeWidth={2.25} /></span>
+            <span><em className="ev-logo-em">Elev</em>aid</span>
+          </Link>
+          <Badge variant="secondary" className="font-body font-medium">Admin</Badge>
         </div>
+        <Button onClick={() => { resetForm(); setShowForm(true); }}>
+          <Plus className="h-4 w-4 mr-1" />
+          Add Scholarship
+        </Button>
       </header>
 
       <main className="container mx-auto px-4 py-8">
@@ -525,7 +525,7 @@ export default function Admin() {
                             eligible_majors: formData.eligible_majors.filter(maj => maj !== m),
                           })}
                         >
-                          {m} ×
+                          {m} Ã—
                         </Badge>
                       ))}
                     </div>

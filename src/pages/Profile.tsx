@@ -1,15 +1,13 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { Link } from 'react-router-dom';
+import '@/styles/elevaid.css';
+import { ArrowLeft, Check, Star, User } from 'lucide-react';
+import { SCHOOL_THEME, getSchoolTheme } from '@/lib/schoolTheme';
 
-const SCHOOLS = [
-  { value: 'morehouse', label: 'Morehouse College', short: 'Morehouse', color: '#8B0000', initials: 'MC' },
-  { value: 'spelman', label: 'Spelman College', short: 'Spelman', color: '#003F87', initials: 'SC' },
-  { value: 'clark_atlanta', label: 'Clark Atlanta University', short: 'Clark Atlanta', color: '#CC0000', initials: 'CAU' },
-  { value: 'morris_brown', label: 'Morris Brown College', short: 'Morris Brown', color: '#4B0082', initials: 'MB' },
-];
+const SCHOOLS = Object.values(SCHOOL_THEME);
 
 const MAJORS = [
   'Computer Science', 'Business Administration', 'Biology', 'Psychology',
@@ -27,7 +25,6 @@ const YEARS = [
 
 export default function Profile() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -90,11 +87,15 @@ export default function Profile() {
     m.toLowerCase().includes(majorSearch.toLowerCase())
   );
 
+  // Derived straight from this student's own selected school â€” never cached,
+  // never shared across sessions. Falls back to the neutral gold/navy theme
+  // until a school is actually chosen.
+  const theme = getSchoolTheme(form.school as any);
+
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: '#0A1628', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ width: 36, height: 36, border: '3px solid rgba(232,184,75,0.15)', borderTopColor: '#E8B84B', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <div className="ev-reset ev-shell-dark" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="ev-spinner" style={{ borderTopColor: 'var(--ev-gold)' }} />
       </div>
     );
   }
@@ -102,115 +103,165 @@ export default function Profile() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap');
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        .pr-bg { min-height: 100vh; min-height: 100dvh; background: #0A1628; font-family: 'DM Sans', sans-serif; padding-bottom: 3rem; }
-        .pr-header { padding: calc(env(safe-area-inset-top, 0px) + 1rem) 1.5rem 1rem; display: flex; align-items: center; gap: 1rem; border-bottom: 1px solid rgba(255,255,255,0.06); }
-        .pr-back { background: none; border: none; color: rgba(255,255,255,0.4); cursor: pointer; font-size: 0.82rem; font-family: 'DM Sans', sans-serif; line-height: 1; padding: 0.25rem 0; }
+        .pr-bg { padding-bottom: 3rem; }
+        .pr-header { padding: calc(env(safe-area-inset-top, 0px) + 1rem) 1.5rem 1rem; display: flex; align-items: center; gap: 1rem; border-bottom: 2px solid var(--ev-border); transition: background 0.25s ease, border-color 0.25s ease; }
+        .pr-school-tag { font-size: 0.68rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: var(--ev-radius-full); margin-left: 0.25rem; }
+        .pr-back { background: none; border: none; color: var(--ev-text-faint); cursor: pointer; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.25rem 0; }
         .pr-back:hover { color: #fff; }
-        .pr-title { font-family: 'Sora', sans-serif; font-size: 1.1rem; font-weight: 800; color: #fff; letter-spacing: -0.02em; }
-        .pr-save { margin-left: auto; background: #E8B84B; color: #0A1628; border: none; border-radius: 10px; padding: 0.55rem 1.1rem; font-size: 0.85rem; font-weight: 700; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: opacity 0.15s; }
-        .pr-save:disabled { opacity: 0.5; cursor: not-allowed; }
-        .pr-body { padding: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem; }
+        .pr-title { font-family: var(--ev-font-display); font-size: 1.05rem; font-weight: 700; color: #fff; letter-spacing: -0.02em; }
+        .pr-body { padding: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem; max-width: 560px; margin: 0 auto; }
         .pr-section { display: flex; flex-direction: column; gap: 0.5rem; }
-        .pr-label { font-size: 0.75rem; font-weight: 600; color: rgba(255,255,255,0.35); text-transform: uppercase; letter-spacing: 0.06em; }
-        .pr-input { width: 100%; background: #111E2E; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 0.95rem 1rem; font-size: 0.95rem; color: #fff; font-family: 'DM Sans', sans-serif; outline: none; transition: border-color 0.2s; }
-        .pr-input:focus { border-color: rgba(232,184,75,0.4); }
         .pr-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
         .pr-school-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; }
-        .pr-school-btn { background: #111E2E; border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; padding: 1rem 0.75rem; cursor: pointer; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; transition: all 0.15s; }
-        .pr-school-btn.selected { border-color: rgba(232,184,75,0.5); background: rgba(232,184,75,0.08); }
-        .pr-school-name { font-size: 0.78rem; font-weight: 700; color: #fff; font-family: 'Sora', sans-serif; }
-        .pr-search { width: 100%; background: #111E2E; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 0.85rem 1rem; font-size: 0.88rem; color: #fff; font-family: 'DM Sans', sans-serif; outline: none; margin-bottom: 0.5rem; }
-        .pr-search::placeholder { color: rgba(255,255,255,0.2); }
-        .pr-search:focus { border-color: rgba(232,184,75,0.4); }
-        .pr-major-list { display: flex; flex-direction: column; gap: 0.4rem; max-height: 260px; overflow-y: auto; scrollbar-width: none; }
+        .pr-school-btn { border: 1px solid var(--ev-border); border-radius: var(--ev-radius-lg); padding: 1rem 0.75rem; cursor: pointer; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; transition: all 0.15s; background: var(--ev-surface); }
+        .pr-school-btn.selected { border-color: var(--ev-gold-border); background: var(--ev-gold-soft); }
+        .pr-school-name { font-size: 0.78rem; font-weight: 700; color: #fff; font-family: var(--ev-font-display); }
+        .pr-major-list { display: flex; flex-direction: column; gap: 0.4rem; max-height: 260px; overflow-y: auto; scrollbar-width: none; margin-top: 0.5rem; }
         .pr-major-list::-webkit-scrollbar { display: none; }
-        .pr-major-btn { background: #111E2E; border: 1px solid rgba(255,255,255,0.07); border-radius: 10px; padding: 0.75rem 1rem; cursor: pointer; text-align: left; font-size: 0.88rem; font-weight: 500; color: rgba(255,255,255,0.7); font-family: 'DM Sans', sans-serif; transition: all 0.15s; }
-        .pr-major-btn.selected { background: rgba(232,184,75,0.1); border-color: rgba(232,184,75,0.4); color: #fff; }
+        .pr-major-btn { border: 1px solid var(--ev-border); border-radius: var(--ev-radius-sm); padding: 0.75rem 1rem; cursor: pointer; text-align: left; font-size: 0.88rem; font-weight: 500; color: var(--ev-text-muted); background: var(--ev-surface); transition: all 0.15s; }
+        .pr-major-btn.selected { background: var(--ev-gold-soft); border-color: var(--ev-gold-border); color: #fff; }
         .pr-year-list { display: flex; flex-direction: column; gap: 0.5rem; }
-        .pr-year-btn { background: #111E2E; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 0.9rem 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: space-between; transition: all 0.15s; }
-        .pr-year-btn.selected { background: rgba(232,184,75,0.1); border-color: rgba(232,184,75,0.4); }
+        .pr-year-btn { border: 1px solid var(--ev-border); border-radius: var(--ev-radius-md); padding: 0.9rem 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: space-between; transition: all 0.15s; background: var(--ev-surface); }
+        .pr-year-btn.selected { background: var(--ev-gold-soft); border-color: var(--ev-gold-border); }
         .pr-year-label { font-size: 0.88rem; font-weight: 600; color: #fff; }
-        .pr-year-check { width: 18px; height: 18px; border-radius: 50%; background: rgba(255,255,255,0.05); border: 1.5px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; }
-        .pr-year-btn.selected .pr-year-check { background: #E8B84B; border-color: #E8B84B; }
+        .pr-year-check { width: 18px; height: 18px; border-radius: 50%; background: var(--ev-surface-2); border: 1.5px solid var(--ev-border); display: flex; align-items: center; justify-content: center; }
+        .pr-year-btn.selected .pr-year-check { background: var(--ev-gold); border-color: var(--ev-gold); }
         .pr-gpa-display { text-align: center; margin: 0.5rem 0 1rem; }
-        .pr-gpa-number { font-family: 'Sora', sans-serif; font-size: 3rem; font-weight: 800; color: #E8B84B; letter-spacing: -0.03em; line-height: 1; }
-        .pr-gpa-sub { font-size: 0.75rem; color: rgba(255,255,255,0.3); margin-top: 0.25rem; }
-        .pr-divider { height: 1px; background: rgba(255,255,255,0.06); }
+        .pr-gpa-number { font-family: var(--ev-font-display); font-size: 2.75rem; font-weight: 700; color: var(--ev-gold); letter-spacing: -0.03em; line-height: 1; }
+        .pr-gpa-sub { font-size: 0.75rem; color: var(--ev-text-faint); margin-top: 0.25rem; }
+
+        .pr-tabbar { display: none; }
+        @media (max-width: 680px) {
+          .pr-bg { padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px)); }
+          .pr-tabbar {
+            display: flex;
+            position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
+            background: var(--ev-surface);
+            border-top: 1px solid var(--ev-border);
+            padding: 0.5rem 1rem calc(0.5rem + env(safe-area-inset-bottom, 0px));
+            justify-content: space-around;
+          }
+          .pr-tab {
+            display: flex; flex-direction: column; align-items: center; gap: 0.2rem;
+            font-size: 0.65rem; font-weight: 600; color: var(--ev-text-faint);
+            padding: 0.3rem 1.1rem; border-radius: var(--ev-radius-md);
+            text-decoration: none; background: none; border: none; cursor: pointer;
+          }
+          .pr-tab.active { color: #fff; }
+        }
       `}</style>
 
-      <div className="pr-bg">
-        <div className="pr-header">
-          <button className="pr-back" onClick={() => { window.location.href = '/dashboard'; }}>← Back</button>
-          <div className="pr-title">Edit Profile</div>
-          <button className="pr-save" onClick={handleSave} disabled={saving}>
-            {saving ? 'Saving...' : 'Save'}
+      <div className="ev-reset ev-shell-dark pr-bg">
+        <div
+          className="pr-header"
+          style={{
+            background: theme ? theme.gradient : undefined,
+            borderBottomColor: theme ? theme.light : 'var(--ev-border)',
+          }}
+        >
+          <button className="pr-back" onClick={() => { window.location.href = '/dashboard'; }}>
+            <ArrowLeft size={15} /> Back
+          </button>
+          <div className="pr-title">
+            Edit Profile
+            {theme && (
+              <span className="pr-school-tag" style={{ background: 'rgba(255,255,255,0.14)', color: '#fff', border: '1px solid rgba(255,255,255,0.22)' }}>
+                {theme.short}
+              </span>
+            )}
+          </div>
+          <button className="ev-btn ev-btn-primary" style={{ marginLeft: 'auto', padding: '0.55rem 1.1rem', fontSize: '0.85rem' }} onClick={handleSave} disabled={saving}>
+            {saving ? 'Savingâ€¦' : 'Save'}
           </button>
         </div>
 
         <div className="pr-body">
           <div className="pr-section">
-            <div className="pr-label">Name</div>
+            <div className="ev-label">Name</div>
             <div className="pr-row">
-              <input className="pr-input" type="text" placeholder="First name" value={form.first_name} onChange={e => setForm(f => ({ ...f, first_name: e.target.value }))} />
-              <input className="pr-input" type="text" placeholder="Last name" value={form.last_name} onChange={e => setForm(f => ({ ...f, last_name: e.target.value }))} />
+              <div className="ev-field">
+                <label className="sr-only" htmlFor="p-first">First name</label>
+                <input id="p-first" className="ev-input" type="text" placeholder="First name" value={form.first_name} onChange={e => setForm(f => ({ ...f, first_name: e.target.value }))} />
+              </div>
+              <div className="ev-field">
+                <label className="sr-only" htmlFor="p-last">Last name</label>
+                <input id="p-last" className="ev-input" type="text" placeholder="Last name" value={form.last_name} onChange={e => setForm(f => ({ ...f, last_name: e.target.value }))} />
+              </div>
             </div>
           </div>
-          <div className="pr-divider" />
+
+          <hr className="ev-divider-dark" />
+
           <div className="pr-section">
-            <div className="pr-label">School</div>
+            <div className="ev-label">School</div>
             <div className="pr-school-grid">
               {SCHOOLS.map(s => (
-                <button key={s.value} className={`pr-school-btn${form.school === s.value ? ' selected' : ''}`} onClick={() => setForm(f => ({ ...f, school: s.value }))}>
-                  <div style={{ width: 48, height: 48, borderRadius: '50%', background: s.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: s.initials.length > 2 ? '0.65rem' : '0.85rem', fontWeight: 800, color: '#fff', fontFamily: "'Sora', sans-serif", border: form.school === s.value ? '2px solid #E8B84B' : '2px solid rgba(255,255,255,0.1)', flexShrink: 0 }}>{s.initials}</div>
+                <button key={s.school} className={`pr-school-btn${form.school === s.school ? ' selected' : ''}`} onClick={() => setForm(f => ({ ...f, school: s.school }))}>
+                  <div style={{ width: 46, height: 46, borderRadius: '50%', background: s.hex, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: s.initials.length > 2 ? '0.65rem' : '0.85rem', fontWeight: 700, color: s.onFill, fontFamily: 'var(--ev-font-display)', border: form.school === s.school ? '2px solid var(--ev-gold)' : '2px solid rgba(255,255,255,0.1)', flexShrink: 0 }}>{s.initials}</div>
                   <div className="pr-school-name">{s.short}</div>
                 </button>
               ))}
             </div>
           </div>
-          <div className="pr-divider" />
+
+          <hr className="ev-divider-dark" />
+
           <div className="pr-section">
-            <div className="pr-label">Major</div>
-            <input className="pr-search" type="text" placeholder="Search majors..." value={majorSearch} onChange={e => setMajorSearch(e.target.value)} />
+            <div className="ev-label">Major</div>
+            <label className="sr-only" htmlFor="p-major-search">Search majors</label>
+            <input id="p-major-search" className="ev-input" type="text" placeholder="Search majorsâ€¦" value={majorSearch} onChange={e => setMajorSearch(e.target.value)} />
             <div className="pr-major-list">
               {filteredMajors.map(m => (
                 <button key={m} className={`pr-major-btn${form.major === m ? ' selected' : ''}`} onClick={() => setForm(f => ({ ...f, major: m }))}>{m}</button>
               ))}
             </div>
           </div>
-          <div className="pr-divider" />
+
+          <hr className="ev-divider-dark" />
+
           <div className="pr-section">
-            <div className="pr-label">Graduation Year</div>
+            <div className="ev-label">Graduation Year</div>
             <div className="pr-year-list">
               {YEARS.map(y => (
                 <button key={y.value} className={`pr-year-btn${form.graduation_year === y.value ? ' selected' : ''}`} onClick={() => setForm(f => ({ ...f, graduation_year: y.value }))}>
                   <span className="pr-year-label">{y.label}</span>
                   <div className="pr-year-check">
-                    {form.graduation_year === y.value && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#0A1628" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg>}
+                    {form.graduation_year === y.value && <Check size={11} color="var(--ev-navy-deep)" strokeWidth={3} />}
                   </div>
                 </button>
               ))}
             </div>
           </div>
-          <div className="pr-divider" />
+
+          <hr className="ev-divider-dark" />
+
           <div className="pr-section">
-            <div className="pr-label">GPA</div>
+            <div className="ev-label">GPA</div>
             <div className="pr-gpa-display">
               <div className="pr-gpa-number">{parseFloat(form.gpa).toFixed(1)}</div>
               <div className="pr-gpa-sub">out of 4.0</div>
             </div>
+            <label className="sr-only" htmlFor="p-gpa">GPA</label>
             <div style={{ padding: '0 0.5rem' }}>
-              <input type="range" min="0" max="40" step="1" value={Math.round(parseFloat(form.gpa) * 10)} onChange={e => setForm(f => ({ ...f, gpa: (parseInt(e.target.value) / 10).toFixed(1) }))} style={{ width: '100%', accentColor: '#E8B84B', height: '4px', cursor: 'pointer' }} />
+              <input id="p-gpa" type="range" min="0" max="40" step="1" value={Math.round(parseFloat(form.gpa) * 10)} onChange={e => setForm(f => ({ ...f, gpa: (parseInt(e.target.value) / 10).toFixed(1) }))} style={{ width: '100%', accentColor: 'var(--ev-gold)', height: '4px', cursor: 'pointer' }} />
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem' }}>
-                {['0.0','1.0','2.0','3.0','4.0'].map(v => <span key={v} style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.25)' }}>{v}</span>)}
+                {['0.0', '1.0', '2.0', '3.0', '4.0'].map(v => <span key={v} style={{ fontSize: '0.7rem', color: 'var(--ev-text-faint)' }}>{v}</span>)}
               </div>
             </div>
           </div>
         </div>
+
+        <nav className="pr-tabbar" aria-label="Primary">
+          <Link className="pr-tab" to="/dashboard">
+            <Star size={19} strokeWidth={2.25} />
+            Matches
+          </Link>
+          <Link className="pr-tab active" to="/profile" style={{ color: theme ? theme.light : '#fff' }}>
+            <User size={19} strokeWidth={2.25} />
+            Profile
+          </Link>
+        </nav>
       </div>
     </>
   );
 }
-
-

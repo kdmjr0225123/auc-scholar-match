@@ -1,4 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+/* Sora + DM Sans are already loaded once, site-wide, via the <link> tags in
+   index.html â€” no per-file @import needed here (that used to cause a flash
+   of unstyled text when every page pulled its own fonts separately). */
 
 @tailwind base;
 @tailwind components;
@@ -6,79 +8,56 @@
 
 @layer base {
   :root {
-    /* Elevaid Academic Theme - Deep Navy & Warm Gold */
-    --background: 220 20% 97%;
-    --foreground: 222 47% 11%;
+    /* Elevaid brand theme â€” same navy/gold tokens as src/styles/elevaid.css,
+       converted to HSL for shadcn/ui's CSS-variable convention. This is what
+       makes Admin (and any other shadcn-based page, e.g. NotFound) match the
+       rest of the product instead of the generic shadcn default palette. */
+    --background: 240 11% 98%;      /* --ev-bg-light  #FAFAFB */
+    --foreground: 227 37% 12%;      /* --ev-ink       #14192B */
 
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card: 0 0% 100%;              /* --ev-surface-light #FFFFFF */
+    --card-foreground: 227 37% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 227 37% 12%;
 
     /* Deep Navy Primary */
-    --primary: 222 47% 15%;
-    --primary-foreground: 45 100% 96%;
+    --primary: 215 53% 13%;         /* --ev-navy      #0F1D31 */
+    --primary-foreground: 0 0% 100%;
 
     /* Warm Gold Accent */
-    --accent: 43 74% 49%;
-    --accent-foreground: 222 47% 11%;
+    --accent: 42 77% 60%;           /* --ev-gold      #E8B84B */
+    --accent-foreground: 216 60% 10%; /* --ev-navy-deep #0A1628 */
 
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 222 47% 11%;
+    --secondary: 225 17% 95%;
+    --secondary-foreground: 227 37% 12%;
 
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 9% 46%;
+    --muted: 225 17% 95%;
+    --muted-foreground: 226 9% 46%; /* --ev-ink-muted #6B7080 */
 
-    --destructive: 0 84% 60%;
+    --destructive: 9 62% 47%;       /* --ev-danger    #C2432E */
     --destructive-foreground: 0 0% 100%;
 
-    --success: 142 76% 36%;
+    --success: 147 66% 26%;         /* --ev-success   #17703F */
     --success-foreground: 0 0% 100%;
 
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 222 47% 15%;
+    --border: 228 12% 92%;          /* --ev-border-light #E7E8EC */
+    --input: 228 12% 92%;
+    --ring: 42 77% 60%;             /* gold focus ring, matches the rest of the site */
 
+    /* Deliberately NOT bumped to match --ev-radius-md (12px) â€” Tailwind
+       derives rounded-sm/md as calc(var(--radius) - 4px/2px), and several
+       tiny controls (Checkbox is 16px square) go fully circular once this
+       gets much above 8px. 0.5rem keeps every derived radius sane. */
     --radius: 0.5rem;
 
     /* Custom tokens */
-    --navy-dark: 222 47% 11%;
-    --navy: 222 47% 15%;
-    --navy-light: 222 30% 25%;
-    --gold: 43 74% 49%;
-    --gold-light: 45 100% 96%;
-    --cream: 40 33% 98%;
-  }
-
-  .dark {
-    --background: 222 47% 8%;
-    --foreground: 45 100% 96%;
-
-    --card: 222 47% 11%;
-    --card-foreground: 45 100% 96%;
-
-    --popover: 222 47% 11%;
-    --popover-foreground: 45 100% 96%;
-
-    --primary: 43 74% 49%;
-    --primary-foreground: 222 47% 11%;
-
-    --accent: 43 74% 49%;
-    --accent-foreground: 222 47% 11%;
-
-    --secondary: 222 30% 20%;
-    --secondary-foreground: 45 100% 96%;
-
-    --muted: 222 30% 20%;
-    --muted-foreground: 220 14% 70%;
-
-    --destructive: 0 62% 50%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 222 30% 20%;
-    --input: 222 30% 20%;
-    --ring: 43 74% 49%;
+    --navy-dark: 216 60% 10%;       /* #0A1628 */
+    --navy: 215 53% 13%;            /* #0F1D31 */
+    --navy-light: 217 35% 23%;      /* #26364F */
+    --gold: 42 77% 60%;             /* #E8B84B */
+    --gold-light: 41 79% 92%;       /* #FBF1DC */
+    --cream: 240 11% 98%;
   }
 }
 
@@ -89,22 +68,22 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Inter', sans-serif;
+    font-family: 'DM Sans', system-ui, sans-serif;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Crimson Pro', serif;
+    font-family: 'Sora', system-ui, sans-serif;
     @apply font-semibold tracking-tight;
   }
 }
 
 @layer utilities {
   .font-display {
-    font-family: 'Crimson Pro', serif;
+    font-family: 'Sora', system-ui, sans-serif;
   }
 
   .font-body {
-    font-family: 'Inter', sans-serif;
+    font-family: 'DM Sans', system-ui, sans-serif;
   }
 
   .text-gradient {

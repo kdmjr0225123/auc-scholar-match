@@ -1,0 +1,422 @@
+/*
+  Elevaid shared design system.
+  Single source of truth for the student-facing product (Landing, Auth,
+  ProfileSetup, Profile, Dashboard). Import this once per page instead of
+  redeclaring colors/fonts/animations inline â€” that duplication is what made
+  the app hard to keep consistent and cheap-looking.
+*/
+
+:root {
+  /* Core palette */
+  --ev-navy-deep: #0A1628;
+  --ev-navy: #0F1D31;
+  --ev-navy-700: #14233A;
+  --ev-surface: #131F32;
+  --ev-surface-2: #19273D;
+  --ev-border: rgba(255, 255, 255, 0.09);
+  --ev-border-strong: rgba(255, 255, 255, 0.16);
+
+  --ev-gold: #E8B84B;
+  --ev-gold-600: #8A6810; /* darkened from a brighter amber so gold text on white/light surfaces clears WCAG AA (4.5:1); the brighter --ev-gold stays as-is for use on dark surfaces and button fills */
+  --ev-gold-soft: rgba(232, 184, 75, 0.12);
+  --ev-gold-border: rgba(232, 184, 75, 0.3);
+
+  --ev-success: #17703F; /* darkened for AA text contrast on white */
+  --ev-success-soft: rgba(52, 184, 113, 0.14);
+  --ev-danger: #C2432E;
+  --ev-danger-soft: rgba(229, 100, 75, 0.12);
+
+  /* Text on dark surfaces */
+  --ev-text: #F6F7FA;
+  --ev-text-muted: rgba(246, 247, 250, 0.66);
+  --ev-text-faint: rgba(246, 247, 250, 0.54); /* raised from 0.46 to clear AA contrast (was ~4.3:1, now ~5:1+) */
+
+  /* Light surfaces (body sections, Dashboard) */
+  --ev-bg-light: #FAFAFB;
+  --ev-surface-light: #FFFFFF;
+  --ev-border-light: #E7E8EC;
+  --ev-ink: #14192B;
+  --ev-ink-muted: #6B7080;
+  --ev-ink-faint: #686D7F; /* darkened from #9CA0AD, which was ~2.6:1 on white â€” failed AA */
+
+  --ev-font-display: 'Sora', system-ui, sans-serif;
+  --ev-font-body: 'DM Sans', system-ui, sans-serif;
+
+  --ev-radius-sm: 8px;
+  --ev-radius-md: 12px;
+  --ev-radius-lg: 16px;
+  --ev-radius-full: 999px;
+
+  --ev-space-1: 0.25rem;
+  --ev-space-2: 0.5rem;
+  --ev-space-3: 0.75rem;
+  --ev-space-4: 1rem;
+  --ev-space-5: 1.5rem;
+  --ev-space-6: 2rem;
+  --ev-space-7: 3rem;
+  --ev-space-8: 4rem;
+
+  --ev-shadow-sm: 0 1px 2px rgba(10, 22, 40, 0.06);
+  --ev-shadow-md: 0 6px 20px rgba(10, 22, 40, 0.08);
+  --ev-shadow-lg: 0 20px 48px rgba(10, 22, 40, 0.16);
+  --ev-shadow-dark-md: 0 8px 24px rgba(0, 0, 0, 0.28);
+}
+
+.ev-reset,
+.ev-reset * {
+  box-sizing: border-box;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- layout shells ---------- */
+
+.ev-shell-dark {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--ev-navy-deep);
+  font-family: var(--ev-font-body);
+  color: var(--ev-text);
+}
+
+.ev-shell-light {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--ev-bg-light);
+  font-family: var(--ev-font-body);
+  color: var(--ev-ink);
+}
+
+.ev-container {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 var(--ev-space-6);
+}
+
+/* ---------- nav ---------- */
+
+.ev-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ev-space-4);
+  padding: var(--ev-space-3) var(--ev-space-6);
+  padding-top: calc(var(--ev-space-3) + env(safe-area-inset-top, 0px));
+  min-height: 60px;
+}
+
+.ev-nav-light {
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--ev-border-light);
+}
+
+.ev-nav-dark {
+  background: transparent;
+}
+
+.ev-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--ev-font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+  color: inherit;
+}
+
+.ev-logo-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: var(--ev-gold);
+  color: var(--ev-navy-deep);
+  flex-shrink: 0;
+}
+
+.ev-logo-em {
+  color: var(--ev-gold);
+}
+
+/* ---------- buttons ---------- */
+
+.ev-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border: none;
+  border-radius: var(--ev-radius-md);
+  font-family: var(--ev-font-body);
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  padding: 0.7rem 1.3rem;
+  transition: background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+  text-decoration: none;
+  line-height: 1.2;
+  white-space: nowrap; /* button labels should never wrap â€” was letting "Sign In" break onto two lines in narrow navs */
+}
+
+.ev-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ev-btn-primary {
+  background: var(--ev-gold);
+  color: var(--ev-navy-deep);
+}
+
+.ev-btn-primary:hover:not(:disabled) {
+  background: #EFC565;
+}
+
+.ev-btn-dark {
+  background: var(--ev-navy);
+  color: #fff;
+}
+
+.ev-btn-dark:hover:not(:disabled) {
+  background: var(--ev-navy-700);
+}
+
+.ev-btn-ghost-light {
+  background: transparent;
+  color: var(--ev-ink-muted);
+}
+
+.ev-btn-ghost-light:hover:not(:disabled) {
+  color: var(--ev-ink);
+  background: rgba(20, 25, 43, 0.05);
+}
+
+.ev-btn-ghost-dark {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ev-text-muted);
+  border: 1px solid var(--ev-border);
+}
+
+.ev-btn-ghost-dark:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--ev-text);
+}
+
+.ev-btn-outline-light {
+  background: var(--ev-surface-light);
+  color: var(--ev-ink-muted);
+  border: 1px solid var(--ev-border-light);
+}
+
+.ev-btn-outline-light:hover:not(:disabled) {
+  color: var(--ev-ink);
+  border-color: #D8DAE1;
+}
+
+.ev-btn-block {
+  width: 100%;
+}
+
+/* ---------- forms ---------- */
+
+.ev-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ev-space-2);
+}
+
+.ev-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--ev-text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.ev-label-light {
+  color: var(--ev-ink-faint);
+}
+
+.ev-input {
+  width: 100%;
+  background: var(--ev-surface);
+  border: 1px solid var(--ev-border);
+  border-radius: var(--ev-radius-md);
+  padding: 0.8rem 1rem;
+  font-size: 0.9rem;
+  color: var(--ev-text);
+  font-family: var(--ev-font-body);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.ev-input::placeholder {
+  color: var(--ev-text-faint);
+}
+
+.ev-input:focus {
+  border-color: var(--ev-gold-border);
+  box-shadow: 0 0 0 3px rgba(232, 184, 75, 0.18);
+}
+
+/* ---------- focus visibility (keyboard nav) ---------- */
+
+.ev-btn:focus-visible,
+.ev-input:focus-visible,
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--ev-gold);
+  outline-offset: 2px;
+}
+
+/* ---------- motion preference ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .ev-reset *,
+  .ev-reset *::before,
+  .ev-reset *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---------- cards ---------- */
+
+.ev-card-dark {
+  background: var(--ev-surface);
+  border: 1px solid var(--ev-border);
+  border-radius: var(--ev-radius-lg);
+}
+
+.ev-card-light {
+  background: var(--ev-surface-light);
+  border: 1px solid var(--ev-border-light);
+  border-radius: var(--ev-radius-lg);
+}
+
+/* ---------- badges / pills ---------- */
+
+.ev-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: var(--ev-radius-full);
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.25rem 0.65rem;
+  line-height: 1.2;
+}
+
+.ev-badge-gold {
+  background: var(--ev-gold-soft);
+  color: var(--ev-gold-600);
+  border: 1px solid var(--ev-gold-border);
+}
+
+.ev-badge-success {
+  background: var(--ev-success-soft);
+  color: var(--ev-success);
+}
+
+/* ---------- typography ---------- */
+
+.ev-eyebrow {
+  font-family: var(--ev-font-body);
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--ev-gold-600);
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+}
+
+.ev-heading {
+  font-family: var(--ev-font-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: inherit;
+  line-height: 1.15;
+}
+
+.ev-sub {
+  color: var(--ev-ink-muted);
+  line-height: 1.65;
+}
+
+.ev-sub-dark {
+  color: var(--ev-text-muted);
+  line-height: 1.65;
+}
+
+/* ---------- misc ---------- */
+
+.ev-divider-dark {
+  height: 1px;
+  background: var(--ev-border);
+  border: none;
+}
+
+.ev-spinner {
+  width: 34px;
+  height: 34px;
+  border: 3px solid var(--ev-gold-soft);
+  border-top-color: var(--ev-gold);
+  border-radius: 50%;
+  animation: ev-spin 0.8s linear infinite;
+}
+
+.ev-skeleton {
+  background: linear-gradient(90deg, #EFEFF2 25%, #F7F7F9 50%, #EFEFF2 75%);
+  background-size: 200% 100%;
+  animation: ev-shimmer 1.5s infinite;
+  border-radius: var(--ev-radius-sm);
+}
+
+@keyframes ev-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes ev-shimmer {
+  to { background-position: -200% 0; }
+}
+
+@keyframes ev-fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes ev-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.ev-animate-fade-up {
+  opacity: 0;
+  animation: ev-fade-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.ev-animate-fade-in {
+  opacity: 0;
+  animation: ev-fade-in 0.5s ease forwards;
+}

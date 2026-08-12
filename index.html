@@ -6,9 +6,16 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <style>body { padding-top: env(safe-area-inset-top); }</style>
 
+    <!-- Fonts: loaded once from head so they start downloading before React
+         mounts, instead of every page injecting its own @import (which was
+         causing a flash of unstyled text on first paint/navigation). -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
     <!-- Primary -->
-    <title>Elevaid — Scholarship Matching for AUC Students</title>
-    <meta name="description" content="Elevaid matches Morehouse, Spelman, Clark Atlanta, and Morris Brown students to scholarships they actually qualify for — and shows exactly why." />
+    <title>Elevaid â€” Scholarship Matching for AUC Students</title>
+    <meta name="description" content="Elevaid matches Morehouse, Spelman, Clark Atlanta, and Morris Brown students to scholarships they actually qualify for â€” and shows exactly why." />
     <meta name="author" content="Elevaid" />
     <meta name="theme-color" content="#1a1a3e" />
 
@@ -28,8 +35,8 @@
     <meta name="mobile-web-app-capable" content="yes" />
 
     <!-- Open Graph -->
-    <meta property="og:title" content="Elevaid — Scholarship Matching for AUC Students" />
-    <meta property="og:description" content="Elevaid matches Morehouse, Spelman, Clark Atlanta, and Morris Brown students to scholarships they actually qualify for — and shows exactly why." />
+    <meta property="og:title" content="Elevaid â€” Scholarship Matching for AUC Students" />
+    <meta property="og:description" content="Elevaid matches Morehouse, Spelman, Clark Atlanta, and Morris Brown students to scholarships they actually qualify for â€” and shows exactly why." />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://elevaid.pro" />
     <meta property="og:site_name" content="Elevaid" />
@@ -37,22 +44,18 @@
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@Elevaid" />
-    <meta name="twitter:title" content="Elevaid — Scholarship Matching for AUC Students" />
-    <meta name="twitter:description" content="Elevaid matches Morehouse, Spelman, Clark Atlanta, and Morris Brown students to scholarships they actually qualify for — and shows exactly why." />
+    <meta name="twitter:title" content="Elevaid â€” Scholarship Matching for AUC Students" />
+    <meta name="twitter:description" content="Elevaid matches Morehouse, Spelman, Clark Atlanta, and Morris Brown students to scholarships they actually qualify for â€” and shows exactly why." />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-  <!-- SW disabled
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js')
-        .then((reg) => console.log('Elevaid SW registered:', reg.scope))
-        .catch((err) => console.log('SW registration failed:', err));
-    });
-  }
-</script>
--->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(() => {});
+        });
+      }
+    </script>
   </body>
 </html>
