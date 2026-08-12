@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { StudentProfile, Scholarship, EligibilityRule, School } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
 import '@/styles/elevaid.css';
-import { GraduationCap, Settings, Calendar, ExternalLink, ChevronDown, ChevronUp, Star, User, Check, Undo2, Loader2, CheckCircle2 } from 'lucide-react';
+import { GraduationCap, Settings, Calendar, ExternalLink, ChevronDown, ChevronUp, Star, User, Check, Undo2, Loader2, CheckCircle2, FileText, Upload } from 'lucide-react';
 import { getSchoolTheme } from '@/lib/schoolTheme';
 
 interface MatchedScholarship extends Scholarship {
@@ -54,6 +54,7 @@ export default function Dashboard() {
   const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
   const [markingId, setMarkingId] = useState<string | null>(null);
   const [view, setView] = useState<'matches' | 'applied'>('matches');
+  const [resumeBusy, setResumeBusy] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const bannerRef = useRef<HTMLDivElement>(null);
@@ -231,6 +232,28 @@ export default function Dashboard() {
     }
   };
 
+  // Quick access to the resume already on file (see Profile) right at the
+  // point a student is about to apply externally, instead of making them
+  // navigate to /profile first to grab it. Reuses profile.resume_url, which
+  // is already loaded — no extra fetch needed.
+  const handleResumeQuickAccess = async () => {
+    if (!profile?.resume_url) {
+      toast({ title: 'No resume on file', description: "Add one from your profile so it's ready to attach." });
+      navigate('/profile');
+      return;
+    }
+    setResumeBusy(true);
+    try {
+      const { data, error } = await supabase.storage.from('resumes').createSignedUrl(profile.resume_url, 3600);
+      if (error || !data?.signedUrl) throw error || new Error('No signed URL returned');
+      window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'Error opening resume', description: 'Please try again.' });
+    } finally {
+      setResumeBusy(false);
+    }
+  };
+
   const handleSignOut = async () => { await signOut(); navigate('/'); };
 
   // Derived straight from this student's own loaded profile — null until
@@ -303,6 +326,16 @@ export default function Dashboard() {
         .dc-reason.fail { color: var(--ev-danger); }
         .dc-apply { margin-top: auto; }
         .dc-view { margin-top: auto; }
+        .dc-apply-row { display: flex; gap: 0.5rem; margin-top: auto; }
+        .dc-apply-row .dc-apply, .dc-apply-row .dc-view { margin-top: 0; flex: 1; }
+        .dc-resume-btn {
+          flex-shrink: 0; width: 42px; border-radius: var(--ev-radius-md);
+          border: 1px solid var(--ev-border-light); background: var(--ev-surface-light);
+          color: var(--ev-ink-faint); display: flex; align-items: center; justify-content: center;
+          cursor: pointer; transition: all 0.15s;
+        }
+        .dc-resume-btn:hover:not(:disabled) { color: var(--ev-gold-600); border-color: var(--ev-gold-border); background: var(--ev-gold-soft); }
+        .dc-resume-btn:disabled { opacity: 0.6; cursor: not-allowed; }
         .dc-mark-applied {
           margin-top: 0.5rem; background: none; border: 1px solid var(--ev-border-light);
           border-radius: var(--ev-radius-md); padding: 0.55rem; font-size: 0.76rem; font-weight: 600;
@@ -460,9 +493,21 @@ export default function Dashboard() {
                         })}
                       </div>
                       {s.matchPercentage >= 80 ? (
-                        <a className="ev-btn ev-btn-dark ev-btn-block dc-apply" href={s.application_url} target="_blank" rel="noopener noreferrer">
-                          Apply on External Site <ExternalLink size={13} />
-                        </a>
+                        <div className="dc-apply-row">
+                          <a className="ev-btn ev-btn-dark dc-apply" href={s.application_url} target="_blank" rel="noopener noreferrer">
+                            Apply on External Site <ExternalLink size={13} />
+                          </a>
+                          <button
+                            type="button"
+                            className="dc-resume-btn"
+                            onClick={handleResumeQuickAccess}
+                            disabled={resumeBusy}
+                            title={profile?.resume_url ? 'View your resume' : 'Add a resume'}
+                            aria-label={profile?.resume_url ? 'View your resume' : 'Add a resume'}
+                          >
+                            {resumeBusy ? <Loader2 size={14} className="animate-spin" /> : profile?.resume_url ? <FileText size={14} /> : <Upload size={14} />}
+                          </button>
+                        </div>
                       ) : (
                         <>
                           <button
@@ -472,15 +517,26 @@ export default function Dashboard() {
                             {expandedId === s.id ? <>Hide Details <ChevronUp size={13} /></> : <>View Details <ChevronDown size={13} /></>}
                           </button>
                           {expandedId === s.id && s.application_url && (
-                            <a
-                              className="ev-btn ev-btn-dark ev-btn-block dc-apply"
-                              href={s.application_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              style={{ marginTop: '0.5rem' }}
-                            >
-                              Visit Application Site <ExternalLink size={13} />
-                            </a>
+                            <div className="dc-apply-row" style={{ marginTop: '0.5rem' }}>
+                              <a
+                                className="ev-btn ev-btn-dark dc-apply"
+                                href={s.application_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                Visit Application Site <ExternalLink size={13} />
+                              </a>
+                              <button
+                                type="button"
+                                className="dc-resume-btn"
+                                onClick={handleResumeQuickAccess}
+                                disabled={resumeBusy}
+                                title={profile?.resume_url ? 'View your resume' : 'Add a resume'}
+                                aria-label={profile?.resume_url ? 'View your resume' : 'Add a resume'}
+                              >
+                                {resumeBusy ? <Loader2 size={14} className="animate-spin" /> : profile?.resume_url ? <FileText size={14} /> : <Upload size={14} />}
+                              </button>
+                            </div>
                           )}
                         </>
                       )}
@@ -530,9 +586,21 @@ export default function Dashboard() {
                       Applied {new Date(a.appliedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </div>
                     {a.scholarship.application_url && (
-                      <a className="ev-btn ev-btn-outline-light ev-btn-block dc-view" href={a.scholarship.application_url} target="_blank" rel="noopener noreferrer">
-                        View Application <ExternalLink size={13} />
-                      </a>
+                      <div className="dc-apply-row">
+                        <a className="ev-btn ev-btn-outline-light dc-view" href={a.scholarship.application_url} target="_blank" rel="noopener noreferrer">
+                          View Application <ExternalLink size={13} />
+                        </a>
+                        <button
+                          type="button"
+                          className="dc-resume-btn"
+                          onClick={handleResumeQuickAccess}
+                          disabled={resumeBusy}
+                          title={profile?.resume_url ? 'View your resume' : 'Add a resume'}
+                          aria-label={profile?.resume_url ? 'View your resume' : 'Add a resume'}
+                        >
+                          {resumeBusy ? <Loader2 size={14} className="animate-spin" /> : profile?.resume_url ? <FileText size={14} /> : <Upload size={14} />}
+                        </button>
+                      </div>
                     )}
                     <button
                       type="button"
