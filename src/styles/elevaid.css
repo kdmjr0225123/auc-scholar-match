@@ -2,7 +2,7 @@
   Elevaid shared design system.
   Single source of truth for the student-facing product (Landing, Auth,
   ProfileSetup, Profile, Dashboard). Import this once per page instead of
-  redeclaring colors/fonts/animations inline â€” that duplication is what made
+  redeclaring colors/fonts/animations inline — that duplication is what made
   the app hard to keep consistent and cheap-looking.
 */
 
@@ -37,7 +37,7 @@
   --ev-border-light: #E7E8EC;
   --ev-ink: #14192B;
   --ev-ink-muted: #6B7080;
-  --ev-ink-faint: #686D7F; /* darkened from #9CA0AD, which was ~2.6:1 on white â€” failed AA */
+  --ev-ink-faint: #686D7F; /* darkened from #9CA0AD, which was ~2.6:1 on white — failed AA */
 
   --ev-font-display: 'Sora', system-ui, sans-serif;
   --ev-font-body: 'DM Sans', system-ui, sans-serif;
@@ -175,7 +175,7 @@
   transition: background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
   text-decoration: none;
   line-height: 1.2;
-  white-space: nowrap; /* button labels should never wrap â€” was letting "Sign In" break onto two lines in narrow navs */
+  white-space: nowrap; /* button labels should never wrap — was letting "Sign In" break onto two lines in narrow navs */
 }
 
 .ev-btn:disabled {

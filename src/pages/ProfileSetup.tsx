@@ -167,7 +167,7 @@ export default function ProfileSetup() {
           <div className="ob-loading">
             <Loader2 size={40} className="spin" color="var(--ev-gold)" strokeWidth={2.25} />
             <div>
-              <div className="ob-loading-title">Finding your matchesâ€¦</div>
+              <div className="ob-loading-title">Finding your matches…</div>
               <div className="ob-loading-sub">Checking every scholarship against your profile.</div>
             </div>
           </div>
@@ -187,7 +187,7 @@ export default function ProfileSetup() {
                 <input id="last_name" className="ev-input" type="text" placeholder="Last name" value={form.last_name} onChange={e => setForm(f => ({ ...f, last_name: e.target.value }))} />
               </div>
             </div>
-            <button className="ev-btn ev-btn-primary ev-btn-block" style={{ padding: '0.9rem' }} onClick={next} disabled={!form.first_name || !form.last_name}>Continue â†’</button>
+            <button className="ev-btn ev-btn-primary ev-btn-block" style={{ padding: '0.9rem' }} onClick={next} disabled={!form.first_name || !form.last_name}>Continue →</button>
           </div>
         )}
 
@@ -212,7 +212,7 @@ export default function ProfileSetup() {
             <div className="ob-sub">Search or scroll to find yours.</div>
             <div className="ev-field" style={{ marginBottom: '0.75rem' }}>
               <label className="sr-only" htmlFor="major-search">Search majors</label>
-              <input id="major-search" className="ev-input" type="text" placeholder="Search majorsâ€¦" value={majorSearch} onChange={e => setMajorSearch(e.target.value)} autoFocus />
+              <input id="major-search" className="ev-input" type="text" placeholder="Search majors…" value={majorSearch} onChange={e => setMajorSearch(e.target.value)} autoFocus />
             </div>
             <div className="ob-major-list">
               {filteredMajors.map(m => (

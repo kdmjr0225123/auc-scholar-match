@@ -1,5 +1,5 @@
 /* Sora + DM Sans are already loaded once, site-wide, via the <link> tags in
-   index.html â€” no per-file @import needed here (that used to cause a flash
+   index.html — no per-file @import needed here (that used to cause a flash
    of unstyled text when every page pulled its own fonts separately). */
 
 @tailwind base;
@@ -8,7 +8,7 @@
 
 @layer base {
   :root {
-    /* Elevaid brand theme â€” same navy/gold tokens as src/styles/elevaid.css,
+    /* Elevaid brand theme — same navy/gold tokens as src/styles/elevaid.css,
        converted to HSL for shadcn/ui's CSS-variable convention. This is what
        makes Admin (and any other shadcn-based page, e.g. NotFound) match the
        rest of the product instead of the generic shadcn default palette. */
@@ -45,7 +45,7 @@
     --input: 228 12% 92%;
     --ring: 42 77% 60%;             /* gold focus ring, matches the rest of the site */
 
-    /* Deliberately NOT bumped to match --ev-radius-md (12px) â€” Tailwind
+    /* Deliberately NOT bumped to match --ev-radius-md (12px) — Tailwind
        derives rounded-sm/md as calc(var(--radius) - 4px/2px), and several
        tiny controls (Checkbox is 16px square) go fully circular once this
        gets much above 8px. 0.5rem keeps every derived radius sane. */

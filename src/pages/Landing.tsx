@@ -28,16 +28,16 @@ function useCounter(target: number, duration: number, trigger: boolean) {
   return value;
 }
 
-// The four schools this actually serves â€” reusing the exact same theme data
+// The four schools this actually serves — reusing the exact same theme data
 // (gradient, hex) that drives the post-login personalization, so the
 // marketing page visually foreshadows the real product instead of running
 // its own disconnected color scheme.
 const SCHOOLS = Object.values(SCHOOL_THEME);
 
 const STEPS = [
-  { n: '01', Icon: ClipboardList, title: 'Build your profile', body: 'School, GPA, major, graduation year. Under 2 minutes â€” no essay, no guesswork.' },
+  { n: '01', Icon: ClipboardList, title: 'Build your profile', body: 'School, GPA, major, graduation year. Under 2 minutes — no essay, no guesswork.' },
   { n: '02', Icon: Zap, title: 'Matched instantly', body: 'Every active scholarship checked against your exact qualifications in real time.' },
-  { n: '03', Icon: CheckCircle2, title: 'See why you qualify', body: 'Full eligibility breakdown on every match â€” GPA, school, major â€” explained before you apply.' },
+  { n: '03', Icon: CheckCircle2, title: 'See why you qualify', body: 'Full eligibility breakdown on every match — GPA, school, major — explained before you apply.' },
   { n: '04', Icon: RefreshCw, title: 'Always current', body: 'New scholarships added regularly. Expired listings are removed automatically overnight, so you never chase a dead link.' },
 ];
 
@@ -158,7 +158,7 @@ export default function Landing() {
 
         /* ---- signature visual: four campus "spines", one per school,
                using the exact same gradients that color the real dashboard
-               banners â€” this is the one graphic idea a template can't
+               banners — this is the one graphic idea a template can't
                generate, because it only exists once you know who you serve. */
         .ev-spines {
           position: relative;
@@ -182,7 +182,7 @@ export default function Landing() {
         }
         .ev-spine:hover { flex-grow: 1.35; }
         /* Crest-style pairing: a bold monogram anchors each band, a thin
-           rule separates it from a lighter, wider-tracked caption below â€”
+           rule separates it from a lighter, wider-tracked caption below —
            two tiers of weight instead of two stacked lines that read the
            same, which was the flat/heavy part of the first pass. */
         .ev-spine-mark {
@@ -238,7 +238,7 @@ export default function Landing() {
         .ev-steps { max-width: 820px; margin: 0 auto; display: flex; flex-direction: column; }
         .ev-step { display: grid; grid-template-columns: auto 1fr; gap: 1.5rem; padding: 2rem 0; border-top: 1px solid var(--ev-border-light); align-items: flex-start; }
         .ev-step:last-child { border-bottom: 1px solid var(--ev-border-light); }
-        /* Solid pale-gold fill, not a WebKit-only text-stroke trick â€” that
+        /* Solid pale-gold fill, not a WebKit-only text-stroke trick — that
            renders invisible in Firefox since transparent fill has no fallback. */
         .ev-step-n { font-family: var(--ev-font-display); font-size: 2.75rem; font-weight: 700; color: #E7CE9B; line-height: 1; }
         .ev-step-body { padding-top: 0.3rem; }
@@ -271,12 +271,12 @@ export default function Landing() {
           <div className="ev-hero-glow" />
           <div className="ev-hero-grid">
             <div className="ev-animate-fade-up">
-              <div className="ev-kicker">Morehouse <span>Â·</span> Spelman <span>Â·</span> Clark Atlanta <span>Â·</span> Morris Brown</div>
+              <div className="ev-kicker">Morehouse <span>·</span> Spelman <span>·</span> Clark Atlanta <span>·</span> Morris Brown</div>
               <h1>
                 The scholarships<br />that fit you<br /><em>were always there.</em>
               </h1>
               <p className="ev-hero-sub">
-                Elevaid matches AUC students to scholarships they actually qualify for â€” and shows exactly why. Two minutes. No guessing.
+                Elevaid matches AUC students to scholarships they actually qualify for — and shows exactly why. Two minutes. No guessing.
               </p>
               <div className="ev-hero-cta-row">
                 <button className="ev-btn ev-btn-primary" onClick={go} style={{ padding: '0.9rem 1.75rem', fontSize: '0.95rem' }}>
@@ -300,7 +300,7 @@ export default function Landing() {
 
         {preview.length > 0 && (
           <div className="ev-preview-wrap">
-            <div className="ev-preview-label">How a match looks â€” real scholarships currently live</div>
+            <div className="ev-preview-label">How a match looks — real scholarships currently live</div>
             <div className="ev-preview-grid">
               {preview.map(s => (
                 <div className="ev-card-dark ev-preview-card" key={s.name}>
@@ -311,7 +311,7 @@ export default function Landing() {
                   </div>
                   <div className="ev-preview-reason">
                     <CheckCircle2 size={12} />
-                    {s.min_gpa ? `GPA â‰¥ ${Number(s.min_gpa).toFixed(1)} required â€” you qualify` : 'Open to all AUC schools and majors'}
+                    {s.min_gpa ? `GPA ≥ ${Number(s.min_gpa).toFixed(1)} required — you qualify` : 'Open to all AUC schools and majors'}
                   </div>
                 </div>
               ))}
@@ -356,9 +356,9 @@ export default function Landing() {
 
         <div className="ev-cta-bottom">
           <h2>Your money is<br /><em>already out there.</em></h2>
-          <p>Millions in scholarship money goes unclaimed every year. The students who find it aren't smarter â€” they just had access.</p>
+          <p>Millions in scholarship money goes unclaimed every year. The students who find it aren't smarter — they just had access.</p>
           <button className="ev-btn ev-btn-primary" onClick={go} style={{ padding: '0.9rem 2.1rem', fontSize: '0.95rem' }}>
-            Find My Scholarships â€” It's Free <ArrowRight size={15} />
+            Find My Scholarships — It's Free <ArrowRight size={15} />
           </button>
           <div className="ev-cta-note">Exclusively for Morehouse, Spelman, Clark Atlanta & Morris Brown students.</div>
         </div>
@@ -368,7 +368,7 @@ export default function Landing() {
             <span className="ev-logo-mark"><GraduationCap size={14} strokeWidth={2.25} /></span>
             <span><em className="ev-logo-em">Elev</em>aid</span>
           </div>
-          <div className="ev-foot-copy">Built for AUC students Â· Â© 2026 Elevaid</div>
+          <div className="ev-foot-copy">Built for AUC students · © 2026 Elevaid</div>
         </div>
       </div>
     </>

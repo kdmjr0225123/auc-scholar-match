@@ -87,7 +87,7 @@ export default function Profile() {
     m.toLowerCase().includes(majorSearch.toLowerCase())
   );
 
-  // Derived straight from this student's own selected school â€” never cached,
+  // Derived straight from this student's own selected school — never cached,
   // never shared across sessions. Falls back to the neutral gold/navy theme
   // until a school is actually chosen.
   const theme = getSchoolTheme(form.school as any);
@@ -171,7 +171,7 @@ export default function Profile() {
             )}
           </div>
           <button className="ev-btn ev-btn-primary" style={{ marginLeft: 'auto', padding: '0.55rem 1.1rem', fontSize: '0.85rem' }} onClick={handleSave} disabled={saving}>
-            {saving ? 'Savingâ€¦' : 'Save'}
+            {saving ? 'Saving…' : 'Save'}
           </button>
         </div>
 
@@ -209,7 +209,7 @@ export default function Profile() {
           <div className="pr-section">
             <div className="ev-label">Major</div>
             <label className="sr-only" htmlFor="p-major-search">Search majors</label>
-            <input id="p-major-search" className="ev-input" type="text" placeholder="Search majorsâ€¦" value={majorSearch} onChange={e => setMajorSearch(e.target.value)} />
+            <input id="p-major-search" className="ev-input" type="text" placeholder="Search majors…" value={majorSearch} onChange={e => setMajorSearch(e.target.value)} />
             <div className="pr-major-list">
               {filteredMajors.map(m => (
                 <button key={m} className={`pr-major-btn${form.major === m ? ' selected' : ''}`} onClick={() => setForm(f => ({ ...f, major: m }))}>{m}</button>

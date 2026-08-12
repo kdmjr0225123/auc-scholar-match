@@ -207,7 +207,7 @@ export default function StudentProfilesView() {
                     <div className="flex items-center justify-between">
                       <div className="text-xs text-muted-foreground">
                         <p className="font-medium text-foreground mb-1">Resume Available</p>
-                        <p>{getFullName(profile)} â€¢ {profile.email || 'No email'}</p>
+                        <p>{getFullName(profile)} • {profile.email || 'No email'}</p>
                         <p className="font-mono text-[10px]">{profile.user_id}</p>
                       </div>
                       <Button
@@ -215,7 +215,7 @@ export default function StudentProfilesView() {
                         size="sm"
                         onClick={() => handleDownloadResume(profile)}
                         // Raw gold (text-accent) on this button's white/near-white
-                        // background is ~1.8:1 â€” fails WCAG AA badly. Same darker
+                        // background is ~1.8:1 — fails WCAG AA badly. Same darker
                         // gold used site-wide for gold-on-light text (elevaid.css
                         // --ev-gold-600), which clears 5:1+.
                         style={{ color: '#8A6810' }}

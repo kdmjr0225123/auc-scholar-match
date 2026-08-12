@@ -525,7 +525,7 @@ export default function Admin() {
                             eligible_majors: formData.eligible_majors.filter(maj => maj !== m),
                           })}
                         >
-                          {m} Ã—
+                          {m} ×
                         </Badge>
                       ))}
                     </div>

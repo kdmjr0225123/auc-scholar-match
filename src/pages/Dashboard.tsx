@@ -126,7 +126,7 @@ export default function Dashboard() {
       if (!yearInRange) return null;
       metCriteria++;
       if (rules.graduation_year_min && rules.graduation_year_max) {
-        matchReasons.push(`Graduation Year: ${profile.graduation_year} is within ${rules.graduation_year_min}â€“${rules.graduation_year_max}`);
+        matchReasons.push(`Graduation Year: ${profile.graduation_year} is within ${rules.graduation_year_min}–${rules.graduation_year_max}`);
       } else {
         matchReasons.push(`Graduation Year: ${profile.graduation_year} (no restriction)`);
       }
@@ -136,7 +136,7 @@ export default function Dashboard() {
         const gpaMatch = (!rules.min_gpa || profile.gpa >= rules.min_gpa) && (!rules.max_gpa || profile.gpa <= rules.max_gpa);
         if (gpaMatch) {
           metCriteria++;
-          if (rules.min_gpa) matchReasons.push(`GPA: ${profile.gpa.toFixed(1)} â‰¥ ${rules.min_gpa.toFixed(1)} minimum`);
+          if (rules.min_gpa) matchReasons.push(`GPA: ${profile.gpa.toFixed(1)} ≥ ${rules.min_gpa.toFixed(1)} minimum`);
         } else {
           if (rules.min_gpa && profile.gpa < rules.min_gpa) failReasons.push(`GPA: ${profile.gpa.toFixed(1)} below ${rules.min_gpa.toFixed(1)} minimum`);
         }
@@ -162,7 +162,7 @@ export default function Dashboard() {
 
   const handleSignOut = async () => { await signOut(); navigate('/'); };
 
-  // Derived straight from this student's own loaded profile â€” null until
+  // Derived straight from this student's own loaded profile — null until
   // `profile` is actually fetched for the signed-in user, so there's no
   // window where a previous session's color could show through.
   const theme = getSchoolTheme(profile?.school);
@@ -171,7 +171,7 @@ export default function Dashboard() {
     return (
       <div className="ev-reset ev-shell-light" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '1rem' }}>
         <div className="ev-spinner" />
-        <div style={{ fontSize: '0.88rem', color: 'var(--ev-ink-faint)' }}>Finding your matchesâ€¦</div>
+        <div style={{ fontSize: '0.88rem', color: 'var(--ev-ink-faint)' }}>Finding your matches…</div>
       </div>
     );
   }
@@ -229,7 +229,7 @@ export default function Dashboard() {
         .dash-empty h3 { font-family: var(--ev-font-display); font-size: 1.15rem; font-weight: 700; color: var(--ev-ink); margin-bottom: 0.5rem; }
         .dash-empty p { font-size: 0.85rem; color: var(--ev-ink-faint); margin-bottom: 1.5rem; }
 
-        /* Mobile app-shell bottom tab bar. Additive only â€” the top nav keeps
+        /* Mobile app-shell bottom tab bar. Additive only — the top nav keeps
            Sign Out / Admin exactly as-is on every screen size. This just
            gives the installed-PWA experience a native-app navigation feel. */
         .dash-tabbar { display: none; }
@@ -309,12 +309,12 @@ export default function Dashboard() {
           {matched.length === 0 ? (
             <div className="dash-empty">
               <h3>No matches yet</h3>
-              <p>Try updating your profile â€” we add new scholarships regularly.</p>
+              <p>Try updating your profile — we add new scholarships regularly.</p>
               <Link to="/profile"><button className="ev-btn ev-btn-dark">Update Profile</button></Link>
             </div>
           ) : (
             <>
-              <div className="dash-section-label">Your matches â€” sorted by best fit</div>
+              <div className="dash-section-label">Your matches — sorted by best fit</div>
               <div className="dash-grid">
                 {matched.map((s, i) => (
                   <div
@@ -342,7 +342,7 @@ export default function Dashboard() {
                         const pass = r.startsWith('pass:');
                         const text = r.replace(/^pass:|^fail:/, '');
                         return (
-                          <div key={ri} className={`dc-reason ${pass ? 'pass' : 'fail'}`}>{pass ? 'âœ“' : 'âœ—'} {text}</div>
+                          <div key={ri} className={`dc-reason ${pass ? 'pass' : 'fail'}`}>{pass ? '✓' : '✗'} {text}</div>
                         );
                       })}
                     </div>

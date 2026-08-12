@@ -165,7 +165,7 @@ export default function Auth() {
             </div>
 
             <button type="submit" className="ev-btn ev-btn-primary ev-btn-block" disabled={loading} style={{ marginTop: '1.1rem', padding: '0.9rem' }}>
-              {loading ? 'Loadingâ€¦' : mode === 'signup' ? <>Continue <ArrowRight size={15} /></> : <>Sign In <ArrowRight size={15} /></>}
+              {loading ? 'Loading…' : mode === 'signup' ? <>Continue <ArrowRight size={15} /></> : <>Sign In <ArrowRight size={15} /></>}
             </button>
           </form>
 

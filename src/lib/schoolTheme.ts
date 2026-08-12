@@ -1,7 +1,7 @@
 // Single source of truth for per-school color identity.
 //
 // These values key off the same `school` column (student_profiles.school /
-// the `School` enum) that already drives real eligibility matching â€” this
+// the `School` enum) that already drives real eligibility matching — this
 // file only maps that existing, RLS-scoped, per-user value to a color. It
 // never infers or caches a school independently, so there's no path for a
 // student to see a color that doesn't match their own stored profile.
@@ -18,27 +18,27 @@ export interface SchoolTheme {
   soft: string;
   /** hex at ~30% opacity, for borders */
   border: string;
-  /** Lightened variant of `hex`, for use as TEXT on dark surfaces â€” several
+  /** Lightened variant of `hex`, for use as TEXT on dark surfaces — several
    *  school colors (Morehouse maroon, Morris Brown indigo) are too dark to
    *  clear WCAG AA as text on a navy background, so this is a separate,
    *  pre-checked value rather than something computed ad hoc per use. */
   light: string;
   /** Darkened/saturated variant of `hex`, for use as TEXT on light/white
    *  surfaces. Most school colors already clear AA as-is (deep === hex),
-   *  but Spelman's true brand blue is a light Carolina blue â€” gorgeous as a
-   *  fill, unreadable as small text on white â€” so it gets its own
+   *  but Spelman's true brand blue is a light Carolina blue — gorgeous as a
+   *  fill, unreadable as small text on white — so it gets its own
    *  pre-checked darker value here instead of quietly substituting a
    *  different "Spelman blue" everywhere. */
   deep: string;
   /** Text color to use ON TOP of a `hex`-filled surface (school avatar
    *  chips, solid badges). White for every dark school color; for
-   *  Spelman's light blue, white text has almost no contrast against it â€”
-   *  the same problem Spelman's own wordmark solves with a black outline â€”
+   *  Spelman's light blue, white text has almost no contrast against it —
+   *  the same problem Spelman's own wordmark solves with a black outline —
    *  so this uses a dark navy instead. */
   onFill: string;
   /** A dark gradient built FROM the school's own hue (same hue/saturation,
    *  lightness pulled way down) rather than a generic navy card with a
-   *  colored hairline â€” this is the actual card background, not a hint of
+   *  colored hairline — this is the actual card background, not a hint of
    *  one. White text on every stop clears 12:1+, gold clears 7:1+. */
   gradient: string;
 }
@@ -57,7 +57,7 @@ export const SCHOOL_THEME: Record<School, SchoolTheme> = {
     onFill: '#fff',
     gradient: 'linear-gradient(150deg, #520000 0%, #330000 55%, #1C0000 100%)',
   },
-  // Real Spelman brand blue â€” the light Carolina/baby-blue seen behind the
+  // Real Spelman brand blue — the light Carolina/baby-blue seen behind the
   // SPELMAN wordmark, not the dark navy this used to be. Because it's a
   // light color, it needs `deep` (for text-on-white) and `onFill` (dark
   // navy instead of white, for text painted directly on top of `hex`).
@@ -104,7 +104,7 @@ export const SCHOOL_THEME: Record<School, SchoolTheme> = {
   },
 };
 
-/** Safe lookup â€” returns null for anything unset/unrecognized, callers should
+/** Safe lookup — returns null for anything unset/unrecognized, callers should
  *  fall back to the neutral navy/gold theme rather than guessing. */
 export function getSchoolTheme(school: School | null | undefined): SchoolTheme | null {
   if (!school) return null;
