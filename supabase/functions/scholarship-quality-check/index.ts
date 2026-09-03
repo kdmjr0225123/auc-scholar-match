@@ -13,7 +13,6 @@ const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 // silently makes it unmatchable on the dashboard regardless of how it scores.
 const HBCU_SCHOOLS = ["morehouse", "spelman", "clark_atlanta", "morris_brown"];
 
-const MIN_MONTHS_REMAINING = 2;
 const FETCH_TIMEOUT_MS = 9000;
 const MIN_DESCRIPTION_LENGTH = 40;
 
@@ -86,23 +85,13 @@ interface RunResult {
   reason: string;
 }
 
-function monthsFromNow(months: number): Date {
-  const d = new Date();
-  d.setMonth(d.getMonth() + months);
-  return d;
-}
-
-// Gate 1: deadline must be at least MIN_MONTHS_REMAINING out.
+// Gate 1: deadline must not have already passed.
 function checkDeadline(deadline: string | null): { ok: boolean; reason?: string } {
   if (!deadline) return { ok: false, reason: "Missing deadline" };
   const d = new Date(deadline);
   if (isNaN(d.getTime())) return { ok: false, reason: "Invalid deadline" };
   const now = new Date();
   if (d < now) return { ok: false, reason: `Deadline already passed (${deadline})` };
-  const threshold = monthsFromNow(MIN_MONTHS_REMAINING);
-  if (d < threshold) {
-    return { ok: false, reason: `Deadline within ${MIN_MONTHS_REMAINING} months (${deadline}) — needs more runway` };
-  }
   return { ok: true };
 }
 
