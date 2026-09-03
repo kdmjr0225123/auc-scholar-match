@@ -23,3 +23,10 @@ dist-ssr
 *.sln
 *.sw?
 apply-*.ps1
+
+# Environment files — VITE_ vars here are safe to expose (they ship in the
+# client bundle anyway), but this should never be the place a real secret
+# lands, so it stays out of version control on principle.
+.env
+.env.local
+.env.*.local
