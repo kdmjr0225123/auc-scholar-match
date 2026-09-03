@@ -11,8 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  GraduationCap, Loader2, Plus, Pencil, Trash2, ArrowLeft, Save, X, Search, Users
+import {
+  GraduationCap, Loader2, Plus, Pencil, Trash2, ArrowLeft, Save, X, Search, Users, Radar
 } from 'lucide-react';
 import {
   Dialog,
@@ -38,6 +38,7 @@ import {
 } from '@/components/ui/popover';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import StudentProfilesView from '@/components/admin/StudentProfilesView';
+import SyntheticCoverageView from '@/components/admin/SyntheticCoverageView';
 
 const SCHOOLS: { value: School; label: string }[] = [
   { value: 'morehouse', label: 'Morehouse' },
@@ -576,8 +577,12 @@ export default function Admin() {
               <Users className="h-4 w-4" />
               Student Profiles
             </TabsTrigger>
+            <TabsTrigger value="coverage" className="flex items-center gap-2">
+              <Radar className="h-4 w-4" />
+              Coverage Check
+            </TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="scholarships">
             {/* Scholarships List */}
             <div className="space-y-4">
@@ -648,6 +653,10 @@ export default function Admin() {
           
           <TabsContent value="students">
             <StudentProfilesView />
+          </TabsContent>
+
+          <TabsContent value="coverage">
+            <SyntheticCoverageView />
           </TabsContent>
         </Tabs>
       </main>
