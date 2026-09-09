@@ -57,6 +57,8 @@ export default function Dashboard() {
   const [resumeBusy, setResumeBusy] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [slowLoad, setSlowLoad] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const bannerRef = useRef<HTMLDivElement>(null);
 
   // Applied scholarships are tracked but shouldn't clutter the "still deciding"
@@ -96,13 +98,21 @@ export default function Dashboard() {
   }, [loading, matched.length]);
 
   const loadData = async () => {
-    const timeout = setTimeout(() => setLoading(false), 5000);
     if (!user) return;
+    setLoadError(false);
+    setSlowLoad(false);
+    // A genuine hang (dead connection, stalled request) shouldn't leave the
+    // user staring at a spinner forever — but it also must never silently
+    // masquerade as "you have zero matches", which is what a hard
+    // setLoading(false) on a timer used to do here. Instead, just surface a
+    // heads-up after a while; the real fetch below still gets to finish (or
+    // fail loudly) on its own.
+    const slowTimer = setTimeout(() => setSlowLoad(true), 8000);
     try {
       const { data: profileData, error: profileError } = await supabase
         .from('student_profiles').select('*').eq('user_id', user.id).maybeSingle();
       if (profileError) throw profileError;
-      if (!profileData) { setLoading(false); return; }
+      if (!profileData) { clearTimeout(slowTimer); setLoading(false); return; }
       setProfile(profileData as StudentProfile);
 
       const { data: scholarshipsData, error: scholarshipsError } = await supabase
@@ -124,9 +134,11 @@ export default function Dashboard() {
       setApplied(appliedList);
       setAppliedIds(new Set(appliedList.map(a => a.scholarship.id)));
     } catch (err: any) {
+      setLoadError(true);
       toast({ variant: 'destructive', title: 'Error loading data', description: err.message });
     } finally {
-      clearTimeout(timeout);
+      clearTimeout(slowTimer);
+      setSlowLoad(false);
       setLoading(false);
     }
   };
@@ -275,6 +287,11 @@ export default function Dashboard() {
       <div className="ev-reset ev-shell-light" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '1rem' }}>
         <div className="ev-spinner" />
         <div style={{ fontSize: '0.88rem', color: 'var(--ev-ink-faint)' }}>Finding your matches…</div>
+        {slowLoad && (
+          <div style={{ fontSize: '0.78rem', color: 'var(--ev-ink-faint)', maxWidth: 260, textAlign: 'center' }}>
+            This is taking longer than usual — hang tight.
+          </div>
+        )}
       </div>
     );
   }
@@ -480,7 +497,13 @@ export default function Dashboard() {
           </div>
 
           {view === 'matches' ? (
-            matched.length === 0 ? (
+            matched.length === 0 && loadError ? (
+              <div className="dash-empty">
+                <h3>Couldn't load your matches</h3>
+                <p>Something went wrong reaching your scholarships. Your data is fine — try again.</p>
+                <button className="ev-btn ev-btn-dark" onClick={() => { setLoading(true); loadData(); }}>Retry</button>
+              </div>
+            ) : matched.length === 0 ? (
               <div className="dash-empty">
                 <h3>No matches yet</h3>
                 <p>Try updating your profile — we add new scholarships regularly.</p>

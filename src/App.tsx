@@ -53,8 +53,8 @@ const App = () => (
                   <Admin />
                 </ProtectedRoute>
               } />
-              <Route path="/login" element={<Navigate to="/auth" replace />} />
-              <Route path="/signin" element={<Navigate to="/auth" replace />} />
+              <Route path="/login" element={<Navigate to="/auth?mode=signin" replace />} />
+              <Route path="/signin" element={<Navigate to="/auth?mode=signin" replace />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </ErrorBoundary>

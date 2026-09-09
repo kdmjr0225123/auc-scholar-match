@@ -16,7 +16,10 @@ export default function ProtectedRoute({ children, requiredRole }: ProtectedRout
   useEffect(() => {
     if (!loading) {
       if (!user) {
-        navigate('/auth');
+        // A signed-out visitor landing here already has an account (they're
+        // bouncing off a protected page) — send them to sign-in, not the
+        // bare /auth route, which defaults to the new-visitor signup form.
+        navigate('/auth?mode=signin');
       } else if (requiredRole && userRole !== requiredRole) {
         navigate('/dashboard');
       }
