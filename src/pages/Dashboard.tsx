@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { StudentProfile, Scholarship, EligibilityRule, School } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
 import '@/styles/elevaid.css';
-import { GraduationCap, Settings, Calendar, ExternalLink, ChevronDown, ChevronUp, Star, User, Check, Undo2, Loader2, CheckCircle2, Download } from 'lucide-react';
+import { GraduationCap, Settings, Calendar, ExternalLink, ChevronDown, ChevronUp, ChevronRight, Star, User, Check, Undo2, Loader2, CheckCircle2, Download, Sparkles } from 'lucide-react';
 import { getSchoolTheme } from '@/lib/schoolTheme';
 
 interface MatchedScholarship extends Scholarship {
@@ -306,6 +306,18 @@ export default function Dashboard() {
         .rev-stat-l { font-size: 0.6rem; color: var(--ev-text-faint); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 0.05rem; }
 
         .dash-section-label { font-size: 0.65rem; color: var(--ev-ink-faint); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; margin-bottom: 1rem; }
+        .dash-resume-cta {
+          display: flex; align-items: center; gap: 1rem; padding: 1.1rem 1.25rem; margin-bottom: 1.5rem;
+          background: var(--ev-surface-light); border: 1px solid var(--ev-border-light); border-radius: var(--ev-radius-lg);
+          text-decoration: none; transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .dash-resume-cta:hover { border-color: var(--ev-gold-border); box-shadow: var(--ev-shadow-sm); }
+        .dash-resume-cta-icon { width: 40px; height: 40px; border-radius: var(--ev-radius-md); background: var(--ev-gold-soft); color: var(--ev-gold-600); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .dash-resume-cta-text { flex: 1; }
+        .dash-resume-cta-title { font-size: 0.9rem; font-weight: 700; color: var(--ev-ink); font-family: var(--ev-font-display); }
+        .dash-resume-cta-sub { font-size: 0.76rem; color: var(--ev-ink-faint); margin-top: 0.1rem; }
+        .dash-resume-cta-arrow { color: var(--ev-ink-faint); flex-shrink: 0; }
+
         .dash-view-tabs { display: flex; gap: 0.4rem; margin-bottom: 1.25rem; }
         .dash-view-tab {
           background: none; border: 1px solid var(--ev-border-light); border-radius: var(--ev-radius-full);
@@ -448,6 +460,15 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+
+          <Link to="/resume-review" className="dash-resume-cta">
+            <div className="dash-resume-cta-icon"><Sparkles size={18} /></div>
+            <div className="dash-resume-cta-text">
+              <div className="dash-resume-cta-title">Review your resume</div>
+              <div className="dash-resume-cta-sub">Get a scorecard and specific fixes before you apply.</div>
+            </div>
+            <ChevronRight size={16} className="dash-resume-cta-arrow" />
+          </Link>
 
           <div className="dash-view-tabs">
             <button className={`dash-view-tab${view === 'matches' ? ' active' : ''}`} onClick={() => setView('matches')}>

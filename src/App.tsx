@@ -11,6 +11,7 @@ import Auth from "./pages/Auth";
 import ProfileSetup from "./pages/ProfileSetup";
 import Profile from "./pages/Profile";
 import Dashboard from "./pages/Dashboard";
+import ResumeReview from "./pages/ResumeReview";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
@@ -40,6 +41,11 @@ const App = () => (
               <Route path="/dashboard" element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="/resume-review" element={
+                <ProtectedRoute>
+                  <ResumeReview />
                 </ProtectedRoute>
               } />
               <Route path="/admin" element={

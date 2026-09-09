@@ -77,6 +77,33 @@ export interface UserRole {
   role: AppRole;
 }
 
+export type ReviewFixPriority = 'high' | 'medium' | 'low';
+
+export interface ResumeReviewFix {
+  priority: ReviewFixPriority;
+  title: string;
+  detail: string;
+}
+
+export interface ResumeReviewCategoryScores {
+  ats_readability: number;
+  clarity: number;
+  impact: number;
+  completeness: number;
+}
+
+export interface ResumeReview {
+  id: string;
+  user_id: string;
+  resume_path: string;
+  overall_score: number;
+  category_scores: ResumeReviewCategoryScores;
+  fixes: ResumeReviewFix[];
+  summary: string | null;
+  model: string;
+  created_at: string;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -104,6 +131,11 @@ export interface Database {
         Row: StudentApplication;
         Insert: Omit<StudentApplication, 'id' | 'applied_at' | 'created_at' | 'updated_at'> & { id?: string; applied_at?: string; created_at?: string; updated_at?: string; };
         Update: Partial<StudentApplication>;
+      };
+      resume_reviews: {
+        Row: ResumeReview;
+        Insert: Omit<ResumeReview, 'id' | 'created_at'> & { id?: string; created_at?: string; };
+        Update: Partial<ResumeReview>;
       };
     };
     Enums: {
