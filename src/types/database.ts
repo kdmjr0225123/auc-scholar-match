@@ -92,6 +92,21 @@ export interface ResumeReviewCategoryScores {
   completeness: number;
 }
 
+export type ResumeEditType = 'cut' | 'rewrite' | 'add' | 'note';
+export type ResumeEditCategory = 'ats_readability' | 'clarity' | 'impact' | 'completeness' | 'tailoring';
+
+// The red-ink markup layer: each edit anchors to an exact substring of
+// `resume_text` (copied verbatim by the model) so the frontend can locate
+// and mark it up inline, rather than just listing advice in the abstract.
+export interface ResumeEdit {
+  type: ResumeEditType;
+  anchor: string;
+  replacement: string;
+  comment: string;
+  category: ResumeEditCategory;
+  priority: ReviewFixPriority;
+}
+
 export interface ResumeReview {
   id: string;
   user_id: string;
@@ -99,7 +114,10 @@ export interface ResumeReview {
   overall_score: number;
   category_scores: ResumeReviewCategoryScores;
   fixes: ResumeReviewFix[];
+  edits: ResumeEdit[];
   summary: string | null;
+  tailored_note: string | null;
+  resume_text: string | null;
   model: string;
   created_at: string;
 }
