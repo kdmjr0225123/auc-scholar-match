@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import '@/styles/elevaid.css';
-import { ArrowLeft, Sparkles, RefreshCw, Loader2, FileText, AlertCircle, UploadCloud } from 'lucide-react';
+import { ArrowLeft, Sparkles, RefreshCw, Loader2, FileText, AlertCircle, UploadCloud, ShieldCheck, CheckCircle2, AlertTriangle, ChevronDown } from 'lucide-react';
 import { StudentProfile, ResumeReview as ResumeReviewRow, ReviewFixPriority, ResumeEdit } from '@/types/database';
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -28,6 +28,19 @@ const PRIORITY_ORDER: Record<ReviewFixPriority, number> = { high: 0, medium: 1, 
 const PRIORITY_LABEL: Record<ReviewFixPriority, string> = { high: 'High priority', medium: 'Medium priority', low: 'Low priority' };
 
 const RESUME_MAX_BYTES = 8 * 1024 * 1024; // 8MB
+
+// Shown before a review exists — must match the backend's RUBRIC_VERSION
+// constant. Once a review exists, review.rubric_version (the version that
+// actually graded it) is used instead, so this is only ever a pre-review
+// placeholder.
+const RUBRIC_VERSION_DISPLAY = '1.0';
+
+const SECTION_DISPLAY_LABELS: Record<string, string> = {
+  education: 'Education',
+  experience: 'Experience',
+  skills: 'Skills',
+  projects: 'Projects',
+};
 
 function scoreColor(score: number): string {
   if (score >= 80) return 'var(--ev-success)';
@@ -252,6 +265,12 @@ export default function ResumeReview() {
     ? [...review.fixes].sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority])
     : [];
 
+  // Deterministic, code-checked facts about the resume (not LLM-judged) —
+  // the "verified facts" panel below is what turns the score from a claim
+  // into something a student (or a career-services partner) can check.
+  const checks = (review?.checks as any) || null;
+  const hasChecks = !!checks && Object.keys(checks).length > 0;
+
   if (loading) {
     return (
       <div className="ev-reset ev-shell-light" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '1rem' }}>
@@ -305,6 +324,36 @@ export default function ResumeReview() {
         .rr-tailored-icon { color: var(--ev-gold-600); flex-shrink: 0; margin-top: 0.15rem; }
         .rr-tailored-label { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ev-gold-600); margin-bottom: 0.3rem; }
         .rr-tailored-text { font-size: 0.85rem; color: var(--ev-ink); line-height: 1.5; }
+
+        /* Trust / "how this works" disclosure — reassurance layer so the
+           score never feels like an unexplained black box. */
+        .rr-trust { margin-bottom: 1.5rem; padding: 0; overflow: hidden; }
+        .rr-trust-summary {
+          list-style: none; cursor: pointer; padding: 0.9rem 1.15rem; display: flex; align-items: center;
+          justify-content: space-between; gap: 0.75rem;
+        }
+        .rr-trust-summary::-webkit-details-marker { display: none; }
+        .rr-trust-summary-left { display: flex; align-items: center; gap: 0.55rem; }
+        .rr-trust-summary-left svg { color: var(--ev-gold-600); flex-shrink: 0; }
+        .rr-trust-summary-text { font-size: 0.82rem; font-weight: 600; color: var(--ev-ink); }
+        .rr-trust-chevron { color: var(--ev-ink-faint); transition: transform 0.15s ease; flex-shrink: 0; }
+        details[open] .rr-trust-chevron { transform: rotate(180deg); }
+        .rr-trust-body { padding: 0 1.15rem 1.1rem; display: flex; flex-direction: column; gap: 0.65rem; }
+        .rr-trust-row { font-size: 0.8rem; color: var(--ev-ink-muted); line-height: 1.55; }
+        .rr-trust-row b { color: var(--ev-ink); font-weight: 600; }
+        .rr-trust-version { font-size: 0.7rem; color: var(--ev-ink-faint); padding-top: 0.4rem; border-top: 1px solid var(--ev-border-light); }
+
+        /* Verified-facts panel — deterministic, code-checked facts about the
+           resume, shown alongside the rubric score so it's part measured
+           fact, not just AI judgment. */
+        .rr-checks { padding: 1.25rem 1.4rem; margin-bottom: 1.5rem; }
+        .rr-checks-label { font-size: 0.65rem; color: var(--ev-ink-faint); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; margin-bottom: 0.85rem; }
+        .rr-check-row { display: flex; align-items: flex-start; gap: 0.6rem; font-size: 0.82rem; color: var(--ev-ink); line-height: 1.5; margin-bottom: 0.6rem; }
+        .rr-check-row:last-of-type { margin-bottom: 0; }
+        .rr-check-icon { flex-shrink: 0; margin-top: 0.1rem; }
+        .rr-check-icon.ok { color: var(--ev-success); }
+        .rr-check-icon.warn { color: var(--ev-gold-600); }
+        .rr-checks-meta { font-size: 0.72rem; color: var(--ev-ink-faint); margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--ev-border-light); }
 
         .rr-section-label { font-size: 0.65rem; color: var(--ev-ink-faint); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; margin-bottom: 1rem; }
         .rr-fixes { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 2rem; }
@@ -385,6 +434,32 @@ export default function ResumeReview() {
                 </div>
               )}
 
+              <details className="ev-card-light rr-trust">
+                <summary className="rr-trust-summary">
+                  <span className="rr-trust-summary-left">
+                    <ShieldCheck size={16} />
+                    <span className="rr-trust-summary-text">How this review is scored</span>
+                  </span>
+                  <ChevronDown size={15} className="rr-trust-chevron" />
+                </summary>
+                <div className="rr-trust-body">
+                  <div className="rr-trust-row">
+                    We grade every resume the same way, on <b>four fixed categories</b> — ATS readability,
+                    clarity, impact, and completeness — plus feedback tailored to your major, class year, and
+                    GPA. The score isn't just an AI's opinion: it's a fixed formula over those four categories,
+                    and a few checks (like whether we can find your contact info or standard section headers)
+                    are pulled straight from your resume, not judged.
+                  </div>
+                  <div className="rr-trust-row">
+                    <b>Only you can see this.</b> Your review is never shared with scholarship providers,
+                    schools, or anyone else.
+                  </div>
+                  <div className="rr-trust-version">
+                    Elevaid Resume Readiness Rubric v{review?.rubric_version || RUBRIC_VERSION_DISPLAY}
+                  </div>
+                </div>
+              </details>
+
               {review && (
                 <>
                   <div className="ev-card-light rr-scorecard">
@@ -421,6 +496,62 @@ export default function ResumeReview() {
                         <div className="rr-tailored-label">For you, specifically</div>
                         <div className="rr-tailored-text">{review.tailored_note}</div>
                       </div>
+                    </div>
+                  )}
+
+                  {hasChecks && (
+                    <div className="ev-card-light rr-checks">
+                      <div className="rr-checks-label">What we verified on the page</div>
+
+                      <div className="rr-check-row">
+                        {checks.has_contact_info
+                          ? <CheckCircle2 size={16} className="rr-check-icon ok" />
+                          : <AlertTriangle size={16} className="rr-check-icon warn" />}
+                        <span>
+                          {checks.has_contact_info
+                            ? 'Contact info (email or phone) found.'
+                            : "We couldn't find an email or phone number — add one so recruiters can reach you."}
+                        </span>
+                      </div>
+
+                      {Array.isArray(checks.sections_expected) && (
+                        <div className="rr-check-row">
+                          {checks.sections_found?.length === checks.sections_expected?.length
+                            ? <CheckCircle2 size={16} className="rr-check-icon ok" />
+                            : <AlertTriangle size={16} className="rr-check-icon warn" />}
+                          <span>
+                            {checks.sections_found?.length || 0}/{checks.sections_expected.length} standard sections found
+                            {checks.sections_found?.length > 0 && (
+                              <> ({checks.sections_found.map((s: string) => SECTION_DISPLAY_LABELS[s] || s).join(', ')})</>
+                            )}.
+                          </span>
+                        </div>
+                      )}
+
+                      {typeof checks.quantified_terms_per_100_words === 'number' && (
+                        <div className="rr-check-row">
+                          {checks.quantified_terms_per_100_words >= 1.5
+                            ? <CheckCircle2 size={16} className="rr-check-icon ok" />
+                            : <AlertTriangle size={16} className="rr-check-icon warn" />}
+                          <span>
+                            {checks.quantified_terms_per_100_words >= 3
+                              ? 'Strong use of numbers and metrics throughout your bullets.'
+                              : checks.quantified_terms_per_100_words >= 1.5
+                              ? 'Some quantified results — a few more metrics would strengthen it further.'
+                              : 'Very few numbers or metrics on the page — this is capping your impact score below.'}
+                          </span>
+                        </div>
+                      )}
+
+                      {typeof checks.anchors_total === 'number' && checks.anchors_total > 0 && (
+                        <div className="rr-checks-meta">
+                          Every one of the {checks.anchors_verified} edits below was checked word-for-word
+                          against your resume text before we showed it to you
+                          {checks.anchors_total > checks.anchors_verified
+                            ? ` (${checks.anchors_total - checks.anchors_verified} unverifiable edit${checks.anchors_total - checks.anchors_verified === 1 ? '' : 's'} from the model were discarded rather than shown)`
+                            : ''}.
+                        </div>
+                      )}
                     </div>
                   )}
 

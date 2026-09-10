@@ -107,6 +107,21 @@ export interface ResumeEdit {
   priority: ReviewFixPriority;
 }
 
+// Deterministic, code-computed facts about the resume — never LLM-judged.
+// These are what let the score be explained ("here's what we actually
+// found on the page") rather than just asserted, and they're used
+// server-side to floor/cap the LLM's category scores so a subjective
+// score can never contradict an objective, checkable fact.
+export interface ResumeDeterministicChecks {
+  has_contact_info: boolean;
+  sections_found: string[];
+  sections_expected: string[];
+  quantified_terms_per_100_words: number;
+  word_count: number;
+  anchors_verified: number;
+  anchors_total: number;
+}
+
 export interface ResumeReview {
   id: string;
   user_id: string;
@@ -120,6 +135,8 @@ export interface ResumeReview {
   resume_text: string | null;
   model: string;
   created_at: string;
+  rubric_version: string;
+  checks: ResumeDeterministicChecks | Record<string, never>;
 }
 
 export interface Database {
