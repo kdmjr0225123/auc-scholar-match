@@ -63,6 +63,30 @@ type Segment =
   | { kind: 'text'; content: string }
   | { kind: 'edit'; matchedText: string; edit: ResumeEdit; markNumber: number };
 
+// Finds where an anchor sits in the resume text, tolerating whitespace
+// differences. A bullet that wraps across two lines in the original PDF now
+// carries a real line break in resumeText; a model quoting that phrase back
+// often collapses it to a single space. Falling back to a whitespace-
+// tolerant regex (any whitespace run in the anchor matches any whitespace
+// run in the text) keeps those edits placeable instead of silently dropped.
+function findAnchorSpan(resumeText: string, anchor: string): { start: number; end: number } | null {
+  let start = resumeText.indexOf(anchor);
+  if (start !== -1) return { start, end: start + anchor.length };
+
+  start = resumeText.toLowerCase().indexOf(anchor.toLowerCase());
+  if (start !== -1) return { start, end: start + anchor.length };
+
+  const escaped = anchor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+  try {
+    const re = new RegExp(escaped, 'i');
+    const m = re.exec(resumeText);
+    if (m) return { start: m.index, end: m.index + m[0].length };
+  } catch {
+    // Malformed pattern (shouldn't happen since we escape first) — treat as unmatched.
+  }
+  return null;
+}
+
 function findAnchorMatches(resumeText: string, edits: ResumeEdit[]): { matches: EditMatch[]; unmatchedIndexes: number[] } {
   const raw: EditMatch[] = [];
   const unmatchedIndexes: number[] = [];
@@ -70,12 +94,9 @@ function findAnchorMatches(resumeText: string, edits: ResumeEdit[]): { matches: 
   edits.forEach((edit, editIndex) => {
     const anchor = (edit.anchor || '').trim();
     if (!anchor) { unmatchedIndexes.push(editIndex); return; }
-    let start = resumeText.indexOf(anchor);
-    if (start === -1) {
-      start = resumeText.toLowerCase().indexOf(anchor.toLowerCase());
-    }
-    if (start === -1) { unmatchedIndexes.push(editIndex); return; }
-    raw.push({ start, end: start + anchor.length, edit, editIndex });
+    const span = findAnchorSpan(resumeText, anchor);
+    if (!span) { unmatchedIndexes.push(editIndex); return; }
+    raw.push({ start: span.start, end: span.end, edit, editIndex });
   });
 
   raw.sort((a, b) => a.start - b.start);

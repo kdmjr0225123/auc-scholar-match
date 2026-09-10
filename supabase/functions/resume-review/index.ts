@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { getDocumentProxy, extractText } from "https://esm.sh/unpdf@0.12.1";
+import { getDocumentProxy } from "https://esm.sh/unpdf@0.12.1";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -83,6 +83,111 @@ function computeOverallScore(categoryScores: Record<string, number>): number {
   return clampScore(weighted);
 }
 
+// unpdf's own extractText({ mergePages: true }) flattens every line on a
+// page into one continuous, space-joined string — it throws away line
+// breaks entirely, not just page breaks. That was the actual bug behind
+// the manuscript view reading as an undifferentiated wall of text: section
+// headers, job titles, and bullets all ran together with no structure to
+// mirror in the "red-ink" view, even though the frontend already supports
+// preserving line breaks (`white-space: pre-wrap`).
+//
+// This walks the PDF's raw text items ourselves (via pdf.js, which unpdf's
+// getDocumentProxy wraps) and reconstructs the resume's actual line
+// layout: a visual row change becomes a line break, and a noticeably
+// bigger vertical gap (a section boundary, a blank line between entries)
+// becomes a blank line. Word spacing is reconstructed the same way, from
+// horizontal gaps between glyph runs, since many PDF generators encode a
+// space as positioning rather than an actual space character.
+//
+// This assumes a single visual column, which covers every resume we've
+// seen — pdf.js emits text items in content-stream order, and a true
+// multi-column layout could interleave text from two columns. If that
+// ever shows up in practice, this needs column-aware grouping by x-range.
+async function extractResumeLayoutText(pdf: any): Promise<string> {
+  const numPages: number = pdf.numPages;
+  const pageTexts: string[] = [];
+
+  for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+    const page = await pdf.getPage(pageNum);
+    const content = await page.getTextContent();
+    const items = content.items as Array<{ str?: string; transform: number[]; width?: number; height?: number; hasEOL?: boolean }>;
+
+    const lines: string[] = [];
+    let currentLine = "";
+    let lastEndX: number | null = null;
+    let lastY: number | null = null;
+
+    for (const item of items) {
+      if (typeof item.str !== "string") continue; // skip marked-content entries
+      const x = item.transform[4];
+      const y = item.transform[5];
+      const height = item.height || 10;
+
+      // A vertical jump from the previous glyph run means we've moved to
+      // a new visual row — flush the line in progress.
+      if (lastY !== null && Math.abs(y - lastY) > height * 0.5) {
+        if (currentLine) lines.push(currentLine);
+        // A much bigger jump reads as a paragraph/section break in the
+        // original layout — keep it as a blank line rather than
+        // collapsing every gap to the same single line spacing.
+        if (Math.abs(y - lastY) > height * 1.6) lines.push("");
+        currentLine = "";
+        lastEndX = null;
+      }
+
+      if (lastEndX !== null && x - lastEndX > height * 0.15 && !currentLine.endsWith(" ") && !item.str.startsWith(" ")) {
+        currentLine += " ";
+      }
+      currentLine += item.str;
+      lastEndX = x + (item.width || 0);
+      lastY = y;
+
+      if (item.hasEOL) {
+        lines.push(currentLine);
+        currentLine = "";
+        lastEndX = null;
+        lastY = null;
+      }
+    }
+    if (currentLine) lines.push(currentLine);
+    pageTexts.push(lines.join("\n"));
+  }
+
+  return pageTexts
+    .join("\n\n")
+    .replace(/[ \t]+/g, " ")
+    .replace(/ *\n */g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+// Locate an LLM-quoted anchor inside the reconstructed resume text. Tries an
+// exact match, then case-insensitive, then a whitespace-tolerant regex where
+// any run of whitespace in the anchor matches any run of whitespace in the
+// text — this last step is what keeps an edit alive when the model quotes a
+// bullet that wraps across a real line break as a single space. Mirrors the
+// matching rule in the frontend's findAnchorMatches so "verified" here means
+// the same thing as "placeable" there.
+function findAnchorSpan(text: string, anchor: string): { start: number; end: number } | null {
+  let start = text.indexOf(anchor);
+  if (start !== -1) return { start, end: start + anchor.length };
+
+  const lower = text.toLowerCase();
+  const anchorLower = anchor.toLowerCase();
+  start = lower.indexOf(anchorLower);
+  if (start !== -1) return { start, end: start + anchor.length };
+
+  const escaped = anchor.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+");
+  try {
+    const re = new RegExp(escaped, "i");
+    const m = re.exec(text);
+    if (m) return { start: m.index, end: m.index + m[0].length };
+  } catch {
+    // Malformed pattern (shouldn't happen since we escape first) — treat as unmatched.
+  }
+  return null;
+}
+
 // Section headers we check for by plain regex — deliberately simple and
 // deliberately NOT LLM-judged, so this can never be talked into a false
 // positive. Order doubles as the "sections_expected" list shown to students.
@@ -114,10 +219,9 @@ function computeDeterministicChecks(resumeText: string): Omit<DeterministicCheck
   const sectionsFound = Object.keys(SECTION_PATTERNS).filter((key) => SECTION_PATTERNS[key].test(resumeText));
 
   // How numeric/quantified the writing is, normalized per 100 words rather
-  // than "per bullet" — PDF text extraction here merges pages and drops
-  // line breaks, so bullet boundaries aren't reliably detectable from plain
-  // text alone. Word-count normalization is honest about what we can
-  // actually measure.
+  // than "per bullet" — bullet boundaries (line starts, "•"/"-" markers)
+  // vary too much across resume templates to detect reliably, so
+  // word-count normalization is the more honest, template-agnostic measure.
   const quantMatches = resumeText.match(/\$\d[\d,.]*|\d+(\.\d+)?%|\b\d{2,}\b/g) || [];
   const quantifiedTermsPer100Words = wordCount > 0 ? Math.round(((quantMatches.length / wordCount) * 100 + Number.EPSILON) * 10) / 10 : 0;
 
@@ -163,7 +267,7 @@ function applyDeterministicGuardrails(
 // table so tailoring by major is consistent rather than improvised per call.
 const REVIEW_SYSTEM_PROMPT = `You are an experienced career coach giving a college student a red-ink, in-manuscript critique of their resume ahead of scholarship and internship applications. You mark up their actual resume text the way a coach would with a red pen — cutting weak lines, rewriting weak bullets, and adding margin notes — not just handing back generic advice.
 
-You will be given: (1) the student's major, school, class year, and GPA, and (2) the plain-text contents of their resume (extracted from a PDF, so original formatting/whitespace is lost — judge structure from section headers and line breaks only, never fault them for PDF-extraction artifacts).
+You will be given: (1) the student's major, school, class year, and GPA, and (2) the contents of their resume, extracted from a PDF with its original line breaks reconstructed — section headers, job entries, and bullets should each still appear on their own line. Word spacing or a rare misjoined line can still be an extraction artifact, not a real resume problem — never fault the student for that.
 
 RUBRIC (use this, not your own freeform judgment, to decide what's wrong and what's tailored):
 - Bullet quality ("impact"): a strong bullet states an action verb + a concrete task + a measurable result or scope ("Led X, resulting in Y% / $Y / N people/hours"). A bullet that only lists a duty with no outcome is weak — rewrite it, don't just flag it.
@@ -294,8 +398,7 @@ serve(async (req: Request) => {
 
     const arrayBuffer = await fileBlob.arrayBuffer();
     const pdf = await getDocumentProxy(new Uint8Array(arrayBuffer));
-    const { text } = await extractText(pdf, { mergePages: true });
-    const resumeText = (text || "").trim();
+    const resumeText = (await extractResumeLayoutText(pdf)).trim();
 
     if (resumeText.length < 40) {
       return jsonResponse(
@@ -416,15 +519,18 @@ serve(async (req: Request) => {
       : [];
 
     // Re-verify every anchor actually appears in the exact text the model
-    // was given (exact match, then case-insensitive fallback — same rule
-    // the frontend uses to place markup). An edit that can't be located is
-    // dropped here rather than shipped to the client: the manuscript view
-    // should never show a critique it can't actually point to.
+    // was given (exact match, then case-insensitive, then a whitespace-
+    // tolerant regex fallback — same three-step rule the frontend uses to
+    // place markup). The whitespace-tolerant step matters now that line
+    // breaks are real: a resume bullet that wraps across two lines in the
+    // original PDF is one line-break in submittedText, but a model quoting
+    // that phrase back will often collapse it to a single space. Without
+    // this fallback those perfectly valid edits would be silently dropped.
+    // An edit that still can't be located is dropped here rather than
+    // shipped to the client: the manuscript view should never show a
+    // critique it can't actually point to.
     const anchorsTotal = candidateEdits.length;
-    const edits = candidateEdits.filter((e) => {
-      if (submittedText.includes(e.anchor)) return true;
-      return submittedText.toLowerCase().includes(e.anchor.toLowerCase());
-    });
+    const edits = candidateEdits.filter((e) => findAnchorSpan(submittedText, e.anchor) !== null);
     const anchorsVerified = edits.length;
 
     const checks: DeterministicChecks = {
