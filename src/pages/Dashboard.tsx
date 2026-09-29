@@ -530,6 +530,15 @@ export default function Dashboard() {
                         <div className={`ev-badge ${s.matchPercentage >= 80 ? 'ev-badge-success' : 'ev-badge-gold'}`}>{s.matchPercentage}%</div>
                       </div>
                       <div className="dc-provider">{s.provider}</div>
+                      {(s as any).apply_type === 'direct_form' ? (
+                        <div style={{display:'inline-flex',alignItems:'center',gap:'0.3rem',fontSize:'0.68rem',fontWeight:700,color:'var(--ev-success)',background:'var(--ev-success-soft)',padding:'0.18rem 0.6rem',borderRadius:'99px',marginBottom:'0.5rem'}}>
+                          ✓ Direct Apply
+                        </div>
+                      ) : (s as any).apply_type === 'account_required' ? (
+                        <div style={{display:'inline-flex',alignItems:'center',gap:'0.3rem',fontSize:'0.68rem',fontWeight:700,color:'var(--ev-gold-600)',background:'var(--ev-gold-soft)',padding:'0.18rem 0.6rem',borderRadius:'99px',marginBottom:'0.5rem'}}>
+                          🔑 Account Required
+                        </div>
+                      ) : null}
                       <div className="dc-meta">
                         <span className="dc-amt">${s.award_amount?.toLocaleString()}</span>
                         <span className="dc-date">
@@ -573,6 +582,12 @@ export default function Dashboard() {
                             </a>
                           )}
                         </>
+                      )}
+                      {(s as any).apply_notes && (
+                        <div style={{display:'flex',gap:'0.35rem',fontSize:'0.67rem',color:'var(--ev-ink-faint)',lineHeight:1.45,marginTop:'0.3rem',marginBottom:'0.1rem'}}>
+                          <span style={{flexShrink:0,opacity:0.65}}>ℹ</span>
+                          <span>{(s as any).apply_notes}</span>
+                        </div>
                       )}
                       <button
                         type="button"
