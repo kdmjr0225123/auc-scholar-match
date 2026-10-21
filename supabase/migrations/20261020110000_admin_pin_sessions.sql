@@ -207,6 +207,8 @@ BEGIN
     SELECT * FROM pg_policies
     WHERE schemaname = 'public'
       AND (COALESCE(qual, '') || ' ' || COALESCE(with_check, '')) ~* 'has_role.*admin'
+      AND (COALESCE(qual, '') || ' ' || COALESCE(with_check, '')) !~* 'has_admin_session'
+      AND NOT (tablename = 'scholarships' AND policyname = 'Anyone can view active scholarships')
   LOOP
     SELECT string_agg(quote_ident(role_name), ', ')
     INTO role_list
@@ -232,3 +234,8 @@ BEGIN
   END LOOP;
 END;
 $$;
+
+DROP POLICY IF EXISTS "Anyone can view active scholarships" ON public.scholarships;
+CREATE POLICY "Anyone can view active scholarships"
+  ON public.scholarships FOR SELECT TO authenticated
+  USING (is_active = true OR (has_role(auth.uid(), 'admin'::app_role) AND public.has_admin_session()));
