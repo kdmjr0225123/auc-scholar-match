@@ -14,8 +14,15 @@ import Dashboard from "./pages/Dashboard";
 import ResumeReview from "./pages/ResumeReview";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
+import { useAuth } from "@/contexts/AuthContext";
 
 const queryClient = new QueryClient();
+
+function LandingRoute() {
+  const { user, loading, userRole, isOwner } = useAuth();
+  if (!loading && user && isOwner && userRole === "admin") return <Navigate to="/console" replace />;
+  return <Landing />;
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -26,7 +33,7 @@ const App = () => (
         <AuthProvider>
           <ErrorBoundary>
             <Routes>
-              <Route path="/" element={<Landing />} />
+              <Route path="/" element={<LandingRoute />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/profile-setup" element={
                 <ProtectedRoute>
@@ -48,11 +55,12 @@ const App = () => (
                   <ResumeReview />
                 </ProtectedRoute>
               } />
-              <Route path="/admin" element={
-                <ProtectedRoute requiredRole="admin">
+              <Route path="/console" element={
+                <ProtectedRoute ownerOnly>
                   <Admin />
                 </ProtectedRoute>
               } />
+              <Route path="/admin" element={<Navigate to="/console" replace />} />
               <Route path="/login" element={<Navigate to="/auth?mode=signin" replace />} />
               <Route path="/signin" element={<Navigate to="/auth?mode=signin" replace />} />
               <Route path="*" element={<NotFound />} />

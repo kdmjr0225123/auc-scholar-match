@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { StudentProfile, Scholarship, EligibilityRule, School } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
 import '@/styles/elevaid.css';
-import { GraduationCap, Settings, Calendar, ExternalLink, ChevronDown, ChevronUp, ChevronRight, Star, User, Check, Undo2, Loader2, CheckCircle2, Download, Sparkles } from 'lucide-react';
+import { GraduationCap, Calendar, ExternalLink, ChevronDown, ChevronUp, ChevronRight, Star, User, Check, Undo2, Loader2, CheckCircle2, Download, Sparkles } from 'lucide-react';
 import { getSchoolTheme } from '@/lib/schoolTheme';
 
 interface MatchedScholarship extends Scholarship {
@@ -44,8 +44,10 @@ const formatSchool = (school: School): string => ({
 }[school] || school);
 
 export default function Dashboard() {
-  const { user, signOut, userRole } = useAuth();
+  const { user, signOut, isOwner, userRole } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const previewMode = isOwner && userRole === 'admin' && new URLSearchParams(location.search).get('preview') === '1';
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<StudentProfile | null>(null);
@@ -416,17 +418,18 @@ export default function Dashboard() {
       `}</style>
 
       <div className="ev-reset ev-shell-light">
+        {previewMode && (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.75rem', padding: '0.65rem 1rem', background: '#0A1628', color: '#fff', fontSize: '0.82rem' }}>
+            <span>Student preview</span>
+            <Link to="/console" style={{ color: '#E8B84B', fontWeight: 700 }}>Back to console</Link>
+          </div>
+        )}
         <nav className="ev-nav ev-nav-light dash-nav" style={{ borderBottomColor: theme ? theme.border : undefined }}>
           <Link className="ev-logo" to="/" style={{ color: 'var(--ev-ink)' }}>
             <span className="ev-logo-mark"><GraduationCap size={15} strokeWidth={2.25} /></span>
             <span><em className="ev-logo-em">Elev</em>aid</span>
           </Link>
           <div className="dash-nav-r">
-            {userRole === 'admin' && (
-              <Link className="ev-btn ev-btn-outline-light" style={{ padding: '0.4rem 0.85rem', fontSize: '0.78rem' }} to="/admin">
-                <Settings size={13} /> Admin
-              </Link>
-            )}
             <button
               type="button"
               className="ev-btn ev-btn-outline-light"

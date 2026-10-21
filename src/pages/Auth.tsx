@@ -40,6 +40,18 @@ export default function Auth() {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
+        const ownerEmail = import.meta.env.VITE_OWNER_EMAIL?.toLowerCase();
+        if (ownerEmail && session.user.email?.toLowerCase() === ownerEmail) {
+          const { data: role } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', session.user.id)
+            .maybeSingle();
+          if (role?.role === 'admin') {
+            navigate('/console', { replace: true });
+            return;
+          }
+        }
         const { data: profile } = await supabase
           .from('student_profiles')
           .select('id')
@@ -49,7 +61,7 @@ export default function Auth() {
       }
     };
     checkSession();
-  }, []);
+  }, [navigate]);
 
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm(f => ({ ...f, [k]: e.target.value }));
@@ -70,15 +82,32 @@ export default function Auth() {
         if (error) throw error;
         if (data.user) navigate('/profile-setup');
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email: form.email,
           password: form.password,
         });
         if (error) throw error;
-        navigate('/dashboard');
+        const ownerEmail = import.meta.env.VITE_OWNER_EMAIL?.toLowerCase();
+        if (ownerEmail && data.user.email?.toLowerCase() === ownerEmail) {
+          const { data: role } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', data.user.id)
+            .maybeSingle();
+          if (role?.role === 'admin') {
+            navigate('/console', { replace: true });
+            return;
+          }
+        }
+        const { data: profile } = await supabase
+          .from('student_profiles')
+          .select('id')
+          .eq('user_id', data.user.id)
+          .maybeSingle();
+        navigate(profile ? '/dashboard' : '/profile-setup', { replace: true });
       }
-    } catch (err: any) {
-      toast({ variant: 'destructive', title: 'Error', description: err.message });
+    } catch (err: unknown) {
+      toast({ variant: 'destructive', title: 'Error', description: err instanceof Error ? err.message : String(err) });
     } finally {
       setLoading(false);
     }

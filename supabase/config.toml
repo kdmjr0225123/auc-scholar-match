@@ -31,3 +31,23 @@ entrypoint = "./functions/scholarship-quality-check/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/scholarship-quality-check/*.html" ]
+
+[functions.admin-verify-pin]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/admin-verify-pin/index.ts"
+
+[functions.admin-set-pin]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/admin-set-pin/index.ts"
+
+[functions.admin-run-pipeline]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/admin-run-pipeline/index.ts"
+
+[functions.admin-metrics]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/admin-metrics/index.ts"

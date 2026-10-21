@@ -71,3 +71,11 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+
+## Admin console configuration
+
+Set `VITE_OWNER_EMAIL` to the owner account in the Vercel project environment before building. `.env.example` shows the local value. The edge functions independently require the `OWNER_EMAIL` Supabase secret; the client setting does not grant admin access.
+
+For pipeline dispatch, configure `GITHUB_PIPELINE_TOKEN`, `GITHUB_REPOSITORY` (`owner/repository`), and `GITHUB_PIPELINE_WORKFLOW` (workflow file name or ID) as Supabase function secrets. `GITHUB_PIPELINE_REF` is optional and defaults to `main`. The dispatch action remains disabled until these values are configured and the workflow exists.
+
+Deploy the admin PIN migration before deploying the `admin-verify-pin`, `admin-set-pin`, `admin-run-pipeline`, and `admin-metrics` Edge Functions. Never put the PIN, its hash, the service-role key, or the GitHub token in Vite variables or source control.

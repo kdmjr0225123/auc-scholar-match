@@ -7,6 +7,7 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   userRole: AppRole | null;
+  isOwner: boolean;
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
@@ -17,6 +18,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<AppRole | null>(null);
+  const isOwner = Boolean(user?.email && import.meta.env.VITE_OWNER_EMAIL &&
+    user.email.toLowerCase() === import.meta.env.VITE_OWNER_EMAIL.toLowerCase());
   const fetchUserRole = async (userId: string) => {
     const { data, error } = await supabase
       .from('user_roles')
@@ -28,24 +31,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } else {
       setUserRole('user');
     }
+    setLoading(false);
   };
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      if (session?.user) fetchUserRole(session.user.id);
-      setLoading(false);
+      if (session?.user) void fetchUserRole(session.user.id);
+      else {
+        setUserRole(null);
+        setLoading(false);
+      }
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
-          fetchUserRole(session.user.id);
+          setLoading(true);
+          void fetchUserRole(session.user.id);
         } else {
           setUserRole(null);
+          setLoading(false);
         }
-        setLoading(false);
       }
     );
     return () => subscription.unsubscribe();
@@ -65,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUserRole(null);
   };
   return (
-    <AuthContext.Provider value={{ user, session, loading, userRole, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, userRole, isOwner, signUp, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );
