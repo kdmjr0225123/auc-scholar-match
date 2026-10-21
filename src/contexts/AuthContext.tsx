@@ -21,17 +21,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isOwner = Boolean(user?.email && import.meta.env.VITE_OWNER_EMAIL &&
     user.email.toLowerCase() === import.meta.env.VITE_OWNER_EMAIL.toLowerCase());
   const fetchUserRole = async (userId: string) => {
-    const { data, error } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId)
-      .maybeSingle();
-    if (!error && data) {
-      setUserRole(data.role as AppRole);
-    } else {
+    try {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (!error && data) {
+        setUserRole(data.role as AppRole);
+      } else {
+        setUserRole('user');
+      }
+    } catch {
       setUserRole('user');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -44,12 +49,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
           setLoading(true);
-          void fetchUserRole(session.user.id);
+          setTimeout(() => { void fetchUserRole(session.user.id); }, 0);
         } else {
           setUserRole(null);
           setLoading(false);
