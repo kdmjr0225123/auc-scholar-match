@@ -13,6 +13,10 @@ const MIN_RUNWAY_DAYS = 7; // students need at least a week to apply
 const MIN_DESC_LEN = 40;
 const MAX_AWARD = 500_000;
 const FETCH_TIMEOUT = 12000;
+const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
+const GROQ_MODEL = "openai/gpt-oss-120b";
+const AI_MAX_ATTEMPTS = 4;
+const MIN_PAGE_TEXT = 300; // below this the page can't be verified (JS-only, login wall, PDF stub)
 const CONCURRENCY = 5;
 
 const AGGREGATOR_DOMAINS = [
@@ -30,10 +34,15 @@ const NOT_OPEN_PHRASES = [
   "no longer accepting applications", "not currently accepting",
 ];
 
-const CAPTCHA_MARKERS = [
-  "captcha", "are you a human", "are you human", "verify you are human", "recaptcha",
-  "hcaptcha", "checking your browser", "just a moment", "enable javascript and cookies", "ddos-guard",
+// Challenge pages that block the content. A reCAPTCHA on an application form is
+// normal and is NOT a wall, so bare "captcha" only counts when the page has
+// almost no readable content (i.e. the challenge is all there is).
+const CAPTCHA_WALL_MARKERS = [
+  "are you a human", "are you human", "verify you are human", "checking your browser",
+  "enable javascript and cookies to continue", "ddos-guard", "cf-challenge", "attention required! | cloudflare",
 ];
+const CAPTCHA_WEAK_MARKERS = ["captcha", "recaptcha", "hcaptcha", "just a moment"];
+const CAPTCHA_WALL_MAX_TEXT = 1500;
 
 // ClickFix-style malware pages (incident 2026-09-29): fake verification that asks
 // the visitor to open the Run dialog and paste a clipboard command.
@@ -68,6 +77,14 @@ const RESIDENCY_STATES = [
 // Law-firm / injury marketing "scholarships" (lead-gen; one served malware).
 const LEADGEN_PROVIDER = /\b(law (group|firm|office|offices)|attorneys?( at law)?|injury|accident|lawyers?|legal group|esq\.?)\b/i;
 const LEADGEN_NAME = /\b(truck|car|motorcycle|auto|bicycle|pedestrian|wrongful death|personal injury|accident)\b.{0,30}\bscholarship/i;
+
+// Page-content lead-gen signals: catches law firms whose name has no "law" word
+// (e.g. "Florin|Roebig"). Two or more distinct hits fails the scholarship.
+const LEADGEN_BODY = [
+  /personal injury/i, /injury (lawyer|attorney)s?/i, /accident (lawyer|attorney)s?/i, /attorneys? at law/i,
+  /\blaw firm\b/i, /free (case )?(consultation|evaluation)/i, /wrongful death/i, /no fee unless (we|you) win/i,
+  /(car|truck|motorcycle|auto) accident/i, /medical malpractice/i, /workers'? comp(ensation)?/i,
+];
 
 type CriterionResult = { pass: boolean; reason: string; hold?: boolean };
 type CriteriaMap = Record<string, CriterionResult>;
@@ -152,18 +169,35 @@ function testMatchesSomeStudent(eligibleSchools: string[], eligibleMajors: strin
 }
 
 type LinkTests = { url_present: CriterionResult; not_aggregator: CriterionResult; url_resolves: CriterionResult; no_redirect: CriterionResult; no_captcha: CriterionResult; no_malware: CriterionResult };
+type LinkResult = { tests: LinkTests; pageText: string };
 
-async function testLink(url: string | null): Promise<LinkTests> {
+function htmlToText(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&#39;|&rsquo;/g, "'").replace(/&quot;/g, '"')
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+async function testLink(url: string | null): Promise<LinkResult> {
+  const r = await testLinkInner(url);
+  return r;
+}
+
+async function testLinkInner(url: string | null): Promise<LinkResult> {
   const skipped = fail("Skipped -- no valid URL to test");
-  if (!url) return { url_present: hold("Missing application URL"), not_aggregator: skipped, url_resolves: skipped, no_redirect: skipped, no_captcha: skipped, no_malware: skipped };
+  if (!url) return { tests: { url_present: hold("Missing application URL"), not_aggregator: skipped, url_resolves: skipped, no_redirect: skipped, no_captcha: skipped, no_malware: skipped }, pageText: "" };
   let host = "";
   try { host = new URL(url).hostname; } catch {
-    return { url_present: hold("Malformed URL"), not_aggregator: skipped, url_resolves: skipped, no_redirect: skipped, no_captcha: skipped, no_malware: skipped };
+    return { tests: { url_present: hold("Malformed URL"), not_aggregator: skipped, url_resolves: skipped, no_redirect: skipped, no_captcha: skipped, no_malware: skipped }, pageText: "" };
   }
   const url_present = pass("Application URL present");
   const isAgg = AGGREGATOR_DOMAINS.some((d) => host === d || host.endsWith(`.${d}`));
   const not_aggregator = isAgg ? fail(`URL points to aggregator/lead-gen site (${host})`) : pass(`Direct sponsor URL (${host})`);
-  if (isAgg) return { url_present, not_aggregator, url_resolves: skipped, no_redirect: skipped, no_captcha: skipped, no_malware: skipped };
+  if (isAgg) return { tests: { url_present, not_aggregator, url_resolves: skipped, no_redirect: skipped, no_captcha: skipped, no_malware: skipped }, pageText: "" };
   const isTrusted = TRUSTED_DOMAINS.some((d) => host === d || host.endsWith(`.${d}`));
 
   const controller = new AbortController();
@@ -171,7 +205,7 @@ async function testLink(url: string | null): Promise<LinkTests> {
   try {
     const res = await fetch(url, { method: "GET", redirect: "follow", signal: controller.signal, headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36 ElevaidAudit/1.1" } });
     clearTimeout(timer);
-    if (res.status >= 400) return { url_present, not_aggregator, url_resolves: fail(`URL returns HTTP ${res.status}`), no_redirect: skipped, no_captcha: skipped, no_malware: skipped };
+    if (res.status >= 400) return { tests: { url_present, not_aggregator, url_resolves: fail(`URL returns HTTP ${res.status}`), no_redirect: skipped, no_captcha: skipped, no_malware: skipped }, pageText: "" };
 
     let finalHost = host, finalPath = "", origPath = "/";
     try { const p = new URL(res.url || url); finalHost = p.hostname; finalPath = p.pathname; } catch { /* keep defaults */ }
@@ -182,19 +216,21 @@ async function testLink(url: string | null): Promise<LinkTests> {
     const no_redirect = offSite ? fail(`Redirected off-site to ${finalHost} homepage`) : deadLink ? fail("Redirected to site root -- deep link is dead") : pass("Resolves to the expected page");
     const url_resolves = pass(`Resolves with HTTP ${res.status}`);
 
-    const body = (await res.text()).slice(0, 60000);
+    const body = (await res.text()).slice(0, 300000);
+    const pageText = htmlToText(body).slice(0, 40000);
     const lower = body.toLowerCase();
     const malwareHit = MALWARE_MARKERS.find((r) => r.test(body));
     const no_malware = malwareHit ? fail("SECURITY: page asks visitors to run a pasted command (ClickFix pattern)") : pass("No malware pattern detected");
-    if (isTrusted) return { url_present, not_aggregator, url_resolves, no_redirect, no_captcha: pass("Trusted domain -- CAPTCHA check skipped"), no_malware };
-    const captchaHit = CAPTCHA_MARKERS.find((m) => lower.includes(m));
-    const no_captcha = captchaHit ? fail(`CAPTCHA / bot-check wall detected ("${captchaHit}")`) : pass("No CAPTCHA wall detected");
-    return { url_present, not_aggregator, url_resolves, no_redirect, no_captcha, no_malware };
+    if (isTrusted) return { tests: { url_present, not_aggregator, url_resolves, no_redirect, no_captcha: pass("Trusted domain -- CAPTCHA check skipped"), no_malware }, pageText };
+    const wallHit = CAPTCHA_WALL_MARKERS.find((m) => lower.includes(m))
+      ?? (pageText.length < CAPTCHA_WALL_MAX_TEXT ? CAPTCHA_WEAK_MARKERS.find((m) => lower.includes(m)) : undefined);
+    const no_captcha = wallHit ? fail(`CAPTCHA / bot-check wall blocks the page ("${wallHit}")`) : pass("No CAPTCHA wall blocking the content");
+    return { tests: { url_present, not_aggregator, url_resolves, no_redirect, no_captcha, no_malware }, pageText };
   } catch (err) {
     clearTimeout(timer);
     const msg = err instanceof Error && err.name === "AbortError" ? `Request timed out after ${FETCH_TIMEOUT / 1000}s` : `Unreachable: ${String(err)}`;
     // Network blips hold rather than reject; the next run retries.
-    return { url_present, not_aggregator, url_resolves: hold(msg), no_redirect: skipped, no_captcha: skipped, no_malware: skipped };
+    return { tests: { url_present, not_aggregator, url_resolves: hold(msg), no_redirect: skipped, no_captcha: skipped, no_malware: skipped }, pageText: "" };
   }
 }
 
@@ -212,18 +248,142 @@ function summarize(criteria: CriteriaMap): { passed: boolean; hardFail: boolean;
   };
 }
 
+// ---------------------------------------------------------------------------
+// Pre-publish run-through. Runs on the real application page right before a
+// staged scholarship is promoted. Anything it can't verify is held, never
+// promoted.
+// ---------------------------------------------------------------------------
+
+function testPageLeadGen(pageText: string): CriterionResult {
+  if (!pageText) return pass("No page text to scan");
+  const hits = LEADGEN_BODY.filter((r) => r.test(pageText)).map((r) => r.source);
+  if (hits.length >= 2) return fail(`Sponsor page reads like a law firm / injury marketer (${hits.length} signals)`);
+  return pass("Page content has no law-firm marketing signals");
+}
+
+const NAME_STOPWORDS = new Set(["scholarship", "scholarships", "program", "programs", "award", "awards", "fund", "fellowship",
+  "the", "and", "for", "with", "from", "undergraduate", "student", "students", "annual", "contest", "essay", "grant"]);
+
+function testPageIdentity(name: string, pageText: string): CriterionResult {
+  if (pageText.length < MIN_PAGE_TEXT) return hold(`Page has too little readable text to verify (${pageText.length} chars) -- JS-only, login wall or document`);
+  const page = pageText.toLowerCase();
+  const tokens = [...new Set(name.toLowerCase().replace(/[^a-z0-9 ]/g, " ").split(/\s+/)
+    .filter((t) => t.length >= 4 && !NAME_STOPWORDS.has(t) && !/^\d{4}$/.test(t)))];
+  if (tokens.length === 0) return pass("Name has no distinctive words to match");
+  const found = tokens.filter((t) => page.includes(t));
+  const ratio = found.length / tokens.length;
+  return ratio >= 0.5
+    ? pass(`Page matches the scholarship name (${found.length}/${tokens.length} key words)`)
+    : hold(`Page does not appear to be this scholarship's page (${found.length}/${tokens.length} key words: missing ${tokens.filter((t) => !found.includes(t)).join(", ")})`);
+}
+
+type AiVerdict = {
+  is_scholarship_page: boolean;
+  sponsor_type: string;
+  open_now: string;
+  current_undergrads_eligible: string;
+  auc_eligible: string;
+  red_flags: string[];
+  summary: string;
+};
+
+const AI_SYSTEM_PROMPT = `You verify scholarship listings for Elevaid before they are shown to students.
+Students are CURRENT undergraduates at Morehouse College, Spelman College and Clark Atlanta University in Atlanta, Georgia.
+These are private HBCUs and UNCF member institutions. They are NOT Thurgood Marshall College Fund (TMCF) member schools.
+You are given the scholarship as listed and the text of its live web page. Judge ONLY from the page text.
+The text includes site navigation, menus and footers. Ignore them and judge the main content: a company or
+organization page with a long product menu can still be a genuine scholarship page.
+Return JSON with exactly these keys:
+- "is_scholarship_page": true if the page is the sponsor's own page for this specific scholarship (details or application), false if it is unrelated, a generic homepage, a listing aggregator, or a different award.
+- "sponsor_type": one of "foundation", "nonprofit", "government", "university", "corporation", "professional_association", "fraternity_sorority", "law_firm", "marketing_seo", "aggregator", "sweepstakes", "unknown". Use "law_firm" for any legal practice (personal injury, accident, criminal defense, etc.) even if the firm name has no legal words. Use "marketing_seo" when the "scholarship" mainly exists to get backlinks or leads (e.g. essay must link to the sponsor site, unrelated small business).
+- "open_now": "yes", "no" or "unclear" -- is the application currently open or opening soon for an upcoming cycle?
+- "current_undergrads_eligible": "yes", "no" or "unclear" -- can a current undergraduate (sophomore/junior/senior) apply, or is it only for high school seniors / incoming freshmen / graduate students?
+- "auc_eligible": "yes", "no" or "unclear" -- can a student at Morehouse/Spelman/Clark Atlanta apply? "no" if restricted to TMCF member schools, to named schools that are not these, or to residents of a US state other than Georgia.
+- "red_flags": array of short strings (fees to apply, requests for bank/SSN info, run-a-command instructions, mismatched sponsor, etc.). Empty array if none.
+- "summary": one sentence.`;
+
+async function aiReview(row: { name: string; provider: string; amount: unknown; deadline: unknown; description: string }, url: string, pageText: string): Promise<{ result: CriterionResult; verdict: AiVerdict | null }> {
+  if (!GROQ_API_KEY) return { result: hold("AI run-through unavailable (GROQ_API_KEY not set) -- not promoted"), verdict: null };
+  const requestBody = JSON.stringify({
+    model: GROQ_MODEL,
+    temperature: 0,
+    response_format: { type: "json_object" },
+    messages: [
+      { role: "system", content: AI_SYSTEM_PROMPT },
+      { role: "user", content: `Listing:\nName: ${row.name}\nProvider: ${row.provider}\nAmount: ${row.amount ?? "n/a"}\nDeadline: ${row.deadline ?? "n/a"}\nDescription: ${row.description}\nURL: ${url}\n\nPage text (truncated):\n${pageText.slice(0, 14000)}` },
+    ],
+  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 90_000);
+  try {
+    // Rate limits (429) and transient 5xx are retried with backoff; anything
+    // still failing after the last attempt holds the row (fail closed).
+    let res: Response | null = null;
+    for (let attempt = 0; attempt < AI_MAX_ATTEMPTS; attempt++) {
+      res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        signal: controller.signal,
+        headers: { Authorization: `Bearer ${GROQ_API_KEY}`, "Content-Type": "application/json" },
+        body: requestBody,
+      });
+      if (res.status !== 429 && res.status < 500) break;
+      if (attempt === AI_MAX_ATTEMPTS - 1) break;
+      const retryAfter = Number(res.headers.get("retry-after"));
+      const waitMs = Number.isFinite(retryAfter) && retryAfter > 0 ? Math.min(retryAfter * 1000, 20_000) : 2_000 * 2 ** attempt;
+      await res.body?.cancel();
+      await new Promise((r) => setTimeout(r, waitMs));
+    }
+    if (!res || !res.ok) return { result: hold(`AI run-through failed (HTTP ${res?.status ?? "no response"}) after retries -- not promoted`), verdict: null };
+    const json = await res.json();
+    const content = json?.choices?.[0]?.message?.content ?? "";
+    const v = JSON.parse(content.slice(content.indexOf("{"), content.lastIndexOf("}") + 1)) as AiVerdict;
+    // Clear-cut findings reject. Judgement calls hold for a human: a false
+    // rejection hides a real scholarship, a hold only costs one review click.
+    const rejectReasons: string[] = [];
+    const holdReasons: string[] = [];
+    if (["law_firm", "aggregator", "sweepstakes"].includes(v.sponsor_type)) rejectReasons.push(`sponsor is ${v.sponsor_type.replace("_", " ")}`);
+    if (v.auc_eligible === "no") rejectReasons.push("AUC students not eligible");
+    if (v.current_undergrads_eligible === "no") rejectReasons.push("not open to current undergraduates");
+    const severeFlags = (v.red_flags ?? []).filter((f) => /fee to apply|application fee|ssn|social security|bank (account|info)|password|run a command|run dialog|powershell|malware/i.test(f));
+    if (severeFlags.length) rejectReasons.push(`red flags: ${severeFlags.join("; ")}`);
+    if (v.is_scholarship_page !== true) holdReasons.push("page may not be this scholarship's own page");
+    if (v.open_now === "no") holdReasons.push("page suggests applications are not open");
+    if (v.sponsor_type === "marketing_seo") holdReasons.push("sponsor looks like a marketing/SEO scholarship");
+    const summary = (v.summary ?? "").trim();
+    if (rejectReasons.length) return { result: fail(`AI run-through: ${rejectReasons.join(", ")}. ${summary}`.trim()), verdict: v };
+    if (holdReasons.length) return { result: hold(`AI run-through flagged for review: ${holdReasons.join(", ")}. ${summary}`.trim()), verdict: v };
+    return { result: pass(`AI run-through passed (${v.sponsor_type}; open: ${v.open_now}; undergrads: ${v.current_undergrads_eligible}; AUC: ${v.auc_eligible})`), verdict: v };
+  } catch (err) {
+    return { result: hold(`AI run-through error: ${err instanceof Error ? err.message : String(err)} -- not promoted`), verdict: null };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// Serializes AI calls across the concurrent pool so a run never bursts past
+// the provider's rate limit.
+let aiChain: Promise<unknown> = Promise.resolve();
+function aiQueue<T>(fn: () => Promise<T>): Promise<T> {
+  const next = aiChain.then(fn, fn);
+  aiChain = next.catch(() => undefined);
+  return next;
+}
+
+// ---------------------------------------------------------------------------
+
 async function auditLive(s: Record<string, unknown>, rules: Record<string, unknown> | null, students: Record<string, unknown>[], supabase: ReturnType<typeof createClient>) {
   const eligibleSchools = (rules?.eligible_schools as string[] | null) ?? [];
   const eligibleMajors = (rules?.eligible_majors as string[] | null) ?? [];
   const minGpa = (rules?.min_gpa as number | null) ?? (s.min_gpa as number | null) ?? null;
   const url = s.application_url as string | null;
-  const link = await testLink(url);
+  const { tests: link, pageText } = await testLink(url);
   const text = [s.name, s.description, s.application_requirements, s.apply_notes].filter(Boolean).join(" \n ");
   const criteria: CriteriaMap = {
     name: testName(s.name as string | null),
     deadline: testDeadline(s.deadline as string | null),
     eligibility: testEligibility(text),
     lead_gen: testLeadGen((s.name as string) ?? "", (s.provider as string) ?? "", hostOf(url)),
+    page_lead_gen: testPageLeadGen(pageText),
     school_eligibility: testSchoolEligibility(eligibleSchools),
     matches_students: testMatchesSomeStudent(eligibleSchools, eligibleMajors, minGpa, students),
     ...link,
@@ -234,7 +394,7 @@ async function auditLive(s: Record<string, unknown>, rules: Record<string, unkno
     await supabase.from("scholarships").update({
       is_active: false, pipeline_status: "quarantined", quarantine_reason: failures.slice(0, 1000),
       link_status: link.no_malware.pass ? (link.url_resolves.pass ? "ok" : "broken") : "security_flagged",
-      link_checked_at: new Date().toISOString(),
+      link_checked_at: new Date().toISOString(), updated_at: new Date().toISOString(),
     }).eq("id", s.id);
     await supabase.from("pipeline_runs").insert({ scholarship_id: s.id, scholarship_name: s.name, passed: false, link_status: link.url_resolves.pass ? "ok" : "broken", reason: failures });
   } else {
@@ -243,26 +403,44 @@ async function auditLive(s: Record<string, unknown>, rules: Record<string, unkno
   return { passed: !hardFail, deactivated: hardFail, criteria, failures: passed ? null : failures };
 }
 
-async function auditStaged(s: Record<string, unknown>, students: Record<string, unknown>[], supabase: ReturnType<typeof createClient>) {
+// Pure evaluation of a staged row, including the pre-publish run-through.
+// No database writes, so it also powers dry-run test cases.
+async function evaluateStaged(s: Record<string, unknown>, students: Record<string, unknown>[]) {
   const url = (s.application_url ?? s.source_url) as string | null;
-  const link = await testLink(url);
+  const { tests: link, pageText } = await testLink(url);
   const name = ((s.name ?? s.title) as string | null) ?? "";
-  const text = [name, s.description, s.eligibility_raw, s.application_requirements].filter(Boolean).join(" \n ");
+  const provider = (s.provider as string) ?? "";
+  const description = (s.description as string) ?? "";
+  const text = [name, description, s.eligibility_raw, s.application_requirements].filter(Boolean).join(" \n ");
   const criteria: CriteriaMap = {
     name: testName(name),
-    provider: testProvider(s.provider as string | null),
+    provider: testProvider(provider),
     deadline: testDeadline(s.deadline as string | null),
     award_amount: testAwardAmount(s.award_amount as string | null),
-    description: testDescription(s.description as string | null),
+    description: testDescription(description),
     eligibility: testEligibility(text),
-    lead_gen: testLeadGen(name, (s.provider as string) ?? "", hostOf(url)),
+    lead_gen: testLeadGen(name, provider, hostOf(url)),
     matches_students: testMatchesSomeStudent([], [], (s.min_gpa as number | null) ?? null, students),
     ...link,
+    page_lead_gen: testPageLeadGen(pageText),
   };
-  const { passed, hardFail, failures } = summarize(criteria);
+  // The run-through only matters for rows that would otherwise be promoted;
+  // skipping it for rows already failing keeps the AI cost proportional.
+  if (summarize(criteria).passed && url) {
+    criteria.page_identity = testPageIdentity(name, pageText);
+    if (criteria.page_identity.pass) {
+      const { result } = await aiQueue(() => aiReview({ name, provider, amount: s.award_amount, deadline: s.deadline, description }, url, pageText));
+      criteria.ai_run_through = result;
+    }
+  }
+  return { url, name, criteria, ...summarize(criteria) };
+}
+
+async function auditStaged(s: Record<string, unknown>, students: Record<string, unknown>[], supabase: ReturnType<typeof createClient>) {
+  const { url, name, criteria, passed, hardFail, failures } = await evaluateStaged(s, students);
   const now = new Date().toISOString();
 
-  if (passed) {
+  if (passed && criteria.ai_run_through?.pass === true) {
     const awardRaw = s.award_amount as string | null;
     const awardNum = awardRaw ? parseFloat(String(awardRaw).replace(/[^0-9.]/g, "")) : null;
     const years = s.allowed_class_years as string[] | null;
@@ -295,8 +473,8 @@ async function auditStaged(s: Record<string, unknown>, students: Record<string, 
     await supabase.from("scholarship_staging").update({ status: "rejected", audit_passed: false, audit_ran_at: now, audit_criteria: criteria, audit_failure: failures }).eq("id", s.id);
     return { outcome: "rejected" as const, criteria };
   }
-  // Only fixable gaps: keep in the review queue with the reason attached.
-  await supabase.from("scholarship_staging").update({ status: "needs_review", audit_passed: false, audit_ran_at: now, audit_criteria: criteria, audit_failure: `HOLD: ${failures}` }).eq("id", s.id);
+  // Only fixable gaps (or an unverifiable page): keep in the review queue.
+  await supabase.from("scholarship_staging").update({ status: "needs_review", audit_passed: false, audit_ran_at: now, audit_criteria: criteria, audit_failure: `HOLD: ${failures || "pre-publish run-through did not complete"}` }).eq("id", s.id);
   return { outcome: "held" as const, criteria };
 }
 
@@ -327,6 +505,18 @@ serve(async (req) => {
 
   const { data: students } = await supabase.from("student_profiles").select("id, school, major, gpa, graduation_year");
   const allStudents = (students ?? []) as Record<string, unknown>[];
+
+  // Dry run: evaluate test cases (row-shaped objects) with the full staged
+  // gate, including the pre-publish run-through. Writes nothing.
+  if (body.dry_run === true) {
+    const cases = Array.isArray(body.cases) ? body.cases as Record<string, unknown>[] : [];
+    const results = await runPool(cases, async (c) => {
+      const r = await evaluateStaged(c, allStudents);
+      const wouldPromote = r.passed && r.criteria.ai_run_through?.pass === true;
+      return { name: r.name, url: r.url, outcome: wouldPromote ? "promote" : r.hardFail ? "reject" : "hold", failures: r.failures, ai: r.criteria.ai_run_through?.reason ?? null };
+    });
+    return new Response(JSON.stringify({ dry_run: true, results }), { status: 200, headers: { "Content-Type": "application/json" } });
+  }
 
   const { data: session } = await supabase.from("audit_sessions").insert({ source, total_tested: 0, total_passed: 0, total_swept: 0, total_promoted: 0 }).select().single();
   const sessionId = (session as Record<string, unknown> | null)?.id as string;
