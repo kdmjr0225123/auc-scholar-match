@@ -9,7 +9,8 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const HBCU_SCHOOLS = ["morehouse", "spelman", "clark_atlanta", "morris_brown"];
-const MIN_RUNWAY_DAYS = 7; // students need at least a week to apply
+const MIN_RUNWAY_DAYS = 7; // new listings need at least a week of runway to be worth promoting
+const HOLD_EXPIRY_DAYS = 14; // held rows nobody could resolve in this long are expired
 const MIN_DESC_LEN = 40;
 const MAX_AWARD = 500_000;
 const FETCH_TIMEOUT = 12000;
@@ -113,6 +114,17 @@ function testDeadline(deadline: string | null): CriterionResult {
   if (d < now) return fail(`Deadline has passed (${deadline})`);
   if (d.getTime() - now.getTime() < MIN_RUNWAY_DAYS * 86_400_000) return fail(`Deadline within ${MIN_RUNWAY_DAYS} days (${deadline})`);
   return pass(`Deadline valid: ${deadline}`);
+}
+
+// Live rows stay up until the deadline actually passes: students may be mid-
+// application, and the 7-day / 2-day reminder emails depend on it.
+function testDeadlineLive(deadline: string | null): CriterionResult {
+  if (!deadline) return pass("No deadline on record");
+  const d = new Date(deadline);
+  if (isNaN(d.getTime())) return pass("Deadline unparseable -- not grounds to remove");
+  const endOfDeadlineDay = d.getTime() + 86_400_000;
+  if (Date.now() > endOfDeadlineDay) return fail(`Deadline has passed (${deadline})`);
+  return pass(`Deadline not yet passed: ${deadline}`);
 }
 
 function testAwardAmount(amount: number | string | null): CriterionResult {
@@ -380,7 +392,7 @@ async function auditLive(s: Record<string, unknown>, rules: Record<string, unkno
   const text = [s.name, s.description, s.application_requirements, s.apply_notes].filter(Boolean).join(" \n ");
   const criteria: CriteriaMap = {
     name: testName(s.name as string | null),
-    deadline: testDeadline(s.deadline as string | null),
+    deadline: testDeadlineLive(s.deadline as string | null),
     eligibility: testEligibility(text),
     lead_gen: testLeadGen((s.name as string) ?? "", (s.provider as string) ?? "", hostOf(url)),
     page_lead_gen: testPageLeadGen(pageText),
@@ -473,7 +485,13 @@ async function auditStaged(s: Record<string, unknown>, students: Record<string, 
     await supabase.from("scholarship_staging").update({ status: "rejected", audit_passed: false, audit_ran_at: now, audit_criteria: criteria, audit_failure: failures }).eq("id", s.id);
     return { outcome: "rejected" as const, criteria };
   }
-  // Only fixable gaps (or an unverifiable page): keep in the review queue.
+  // Fixable gaps (or an unverifiable page): keep for the morning resolver,
+  // unless nobody has been able to resolve it for HOLD_EXPIRY_DAYS.
+  const createdAt = new Date((s.created_at as string) ?? now).getTime();
+  if (Date.now() - createdAt > HOLD_EXPIRY_DAYS * 86_400_000) {
+    await supabase.from("scholarship_staging").update({ status: "expired", audit_passed: false, audit_ran_at: now, audit_criteria: criteria, audit_failure: `EXPIRED after ${HOLD_EXPIRY_DAYS} days unresolved: ${failures || "run-through did not complete"}` }).eq("id", s.id);
+    return { outcome: "expired" as const, criteria };
+  }
   await supabase.from("scholarship_staging").update({ status: "needs_review", audit_passed: false, audit_ran_at: now, audit_criteria: criteria, audit_failure: `HOLD: ${failures || "pre-publish run-through did not complete"}` }).eq("id", s.id);
   return { outcome: "held" as const, criteria };
 }
@@ -536,6 +554,7 @@ serve(async (req) => {
   const promoted = stagedResults.filter((x) => x.r.outcome === "promoted");
   const rejected = stagedResults.filter((x) => x.r.outcome === "rejected");
   const held = stagedResults.filter((x) => x.r.outcome === "held");
+  const expired = stagedResults.filter((x) => x.r.outcome === "expired");
 
   const auditRows = [
     ...liveResults.map(({ s, r }) => ({ session_id: sessionId, scholarship_id: s.id, scholarship_name: s.name, source: "live", passed: r.passed, criteria: r.criteria, swept_at: r.deactivated ? new Date().toISOString() : null })),
@@ -543,9 +562,9 @@ serve(async (req) => {
   ];
   if (auditRows.length) await supabase.from("audit_results").insert(auditRows);
 
-  const notes = `Live: ${live.length} checked, ${deactivated.length} deactivated${deactivated.length ? ` (${deactivated.map((x) => x.s.name).join("; ")})` : ""}. Staged: ${staged.length} checked, ${promoted.length} promoted, ${held.length} held for review, ${rejected.length} rejected.`;
-  await supabase.from("audit_sessions").update({ total_tested: live.length + staged.length, total_passed: liveResults.filter((x) => x.r.passed).length + promoted.length, total_swept: deactivated.length + rejected.length, total_promoted: promoted.length, notes }).eq("id", sessionId);
+  const notes = `Live: ${live.length} checked, ${deactivated.length} deactivated${deactivated.length ? ` (${deactivated.map((x) => x.s.name).join("; ")})` : ""}. Staged: ${staged.length} checked, ${promoted.length} promoted${promoted.length ? ` (${promoted.map((x) => x.s.name ?? x.s.title).join("; ")})` : ""}, ${held.length} held, ${rejected.length} rejected, ${expired.length} expired.`;
+  await supabase.from("audit_sessions").update({ total_tested: live.length + staged.length, total_passed: liveResults.filter((x) => x.r.passed).length + promoted.length, total_swept: deactivated.length + rejected.length + expired.length, total_promoted: promoted.length, notes }).eq("id", sessionId);
   await supabase.from("pipeline_logs").insert({ ran_at: new Date().toISOString(), status: "audit", scholarships_checked: live.length + staged.length, scholarships_approved: promoted.length, scholarships_quarantined: deactivated.length + rejected.length, scholarships_deactivated: deactivated.length, notes });
 
-  return new Response(JSON.stringify({ session_id: sessionId, live_checked: live.length, deactivated: deactivated.length, staged_checked: staged.length, promoted: promoted.length, held: held.length, rejected: rejected.length, notes }), { status: 200, headers: { "Content-Type": "application/json" } });
+  return new Response(JSON.stringify({ session_id: sessionId, live_checked: live.length, deactivated: deactivated.length, staged_checked: staged.length, promoted: promoted.length, held: held.length, rejected: rejected.length, expired: expired.length, notes }), { status: 200, headers: { "Content-Type": "application/json" } });
 });
