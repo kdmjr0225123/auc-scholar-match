@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import '@/styles/elevaid.css';
 import { SCHOOL_THEME } from '@/lib/schoolTheme';
+import LegalFooter from '@/components/LegalFooter';
 import {
   GraduationCap,
   ClipboardList,
@@ -251,8 +252,6 @@ export default function Landing() {
         .ev-cta-bottom p { font-size: 0.9rem; color: var(--ev-text-muted); margin-bottom: 2.25rem; line-height: 1.7; max-width: 440px; margin-left: auto; margin-right: auto; }
         .ev-cta-note { font-size: 0.7rem; color: var(--ev-text-faint); margin-top: 1rem; }
 
-        .ev-foot { display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 1.5rem calc(1.5rem + env(safe-area-inset-bottom, 0px)); background: var(--ev-surface-light); border-top: 1px solid var(--ev-border-light); flex-wrap: wrap; gap: 0.75rem; }
-        .ev-foot-copy { font-size: 0.72rem; color: var(--ev-ink-faint); }
       `}</style>
 
       <div className="ev-reset ev-shell-light">
@@ -363,13 +362,7 @@ export default function Landing() {
           <div className="ev-cta-note">Exclusively for Morehouse, Spelman, Clark Atlanta & Morris Brown students.</div>
         </div>
 
-        <div className="ev-foot">
-          <div className="ev-logo" style={{ color: 'var(--ev-ink)' }}>
-            <span className="ev-logo-mark"><GraduationCap size={14} strokeWidth={2.25} /></span>
-            <span><em className="ev-logo-em">Elev</em>aid</span>
-          </div>
-          <div className="ev-foot-copy">Built for AUC students · © 2026 Elevaid</div>
-        </div>
+        <LegalFooter />
       </div>
     </>
   );
