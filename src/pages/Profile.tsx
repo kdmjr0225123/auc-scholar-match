@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import '@/styles/elevaid.css';
 import { ArrowLeft, Check, Star, User, Upload, FileText, X, Loader2 } from 'lucide-react';
 import { SCHOOL_THEME, getSchoolTheme } from '@/lib/schoolTheme';
+import { track } from '@/lib/analytics';
 import { US_STATES, GREEK_ORGS, toTri, fromTri, type TriState } from '@/constants/profileOptions';
 
 const RESUME_MAX_BYTES = 8 * 1024 * 1024; // 8MB
@@ -185,6 +186,7 @@ export default function Profile() {
         })
         .eq('user_id', user.id);
       if (error) throw error;
+      track('profile_updated', { answered_about: [about.first_gen, about.pell_eligible, about.home_state].filter(Boolean).length, emails_on: emailsOn });
       toast({ title: 'Profile updated', description: 'Your matches have been refreshed.' });
       window.location.href = '/dashboard';
     } catch (err: any) {

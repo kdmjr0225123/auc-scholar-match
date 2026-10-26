@@ -8,6 +8,7 @@ import '@/styles/elevaid.css';
 import { GraduationCap, Calendar, ExternalLink, ChevronRight, Star, User, Check, Undo2, Loader2, CheckCircle2, Download, Sparkles } from 'lucide-react';
 import { getSchoolTheme } from '@/lib/schoolTheme';
 import { evaluateMatch, matchLabel, matchRank, type MatchResult } from '@/lib/matching';
+import { track } from '@/lib/analytics';
 
 interface MatchedScholarship extends Scholarship {
   match: MatchResult;
@@ -128,7 +129,14 @@ export default function Dashboard() {
         .from('scholarships').select('*, eligibility_rules (*)').eq('is_active', true);
       if (scholarshipsError) throw scholarshipsError;
 
-      setMatched(calculateMatches(profileData as StudentProfile, scholarshipsData || []));
+      const matches = calculateMatches(profileData as StudentProfile, scholarshipsData || []);
+      setMatched(matches);
+      track('matches_viewed', {
+        school: (profileData as StudentProfile).school,
+        total: matches.length,
+        strong: matches.filter(m => isStrong(m.match)).length,
+        to_confirm: matches.filter(m => m.match.verdict === 'check').length,
+      });
 
       const { data: appsData, error: appsError } = await supabase
         .from('student_applications')
@@ -189,6 +197,7 @@ export default function Dashboard() {
       if (error) throw error;
 
       setAppliedIds(prev => new Set(prev).add(scholarship.id));
+      track('marked_applied', { scholarship_id: scholarship.id });
       setApplied(prev => [{ applicationId: data.id, appliedAt: data.applied_at, scholarship }, ...prev]);
       toast({ title: 'Marked as applied', description: `${scholarship.name} moved to your Applied section.` });
     } catch (err: any) {
@@ -555,7 +564,7 @@ export default function Dashboard() {
                         )}
                       </div>
                       {s.application_url && (
-                        <a className="ev-btn ev-btn-dark ev-btn-block dc-apply" href={s.application_url} target="_blank" rel="noopener noreferrer">
+                        <a className="ev-btn ev-btn-dark ev-btn-block dc-apply" href={s.application_url} target="_blank" rel="noopener noreferrer" onClick={() => track('apply_clicked', { scholarship_id: s.id, match: s.match.verdict })}>
                           Apply on sponsor site <ExternalLink size={13} />
                         </a>
                       )}

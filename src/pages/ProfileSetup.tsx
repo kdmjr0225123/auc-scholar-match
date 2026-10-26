@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import '@/styles/elevaid.css';
 import { GraduationCap, Check, Loader2 } from 'lucide-react';
 import { SCHOOL_THEME } from '@/lib/schoolTheme';
+import { track } from '@/lib/analytics';
 
 const SCHOOLS = Object.values(SCHOOL_THEME);
 
@@ -94,6 +95,7 @@ export default function ProfileSetup() {
       const remaining = Math.max(0, 1500 - elapsed);
       await new Promise(resolve => setTimeout(resolve, remaining));
 
+      track('profile_completed', { school: profileData.school });
       navigate('/dashboard');
     } catch (err: any) {
       console.error('Submit error:', err);
