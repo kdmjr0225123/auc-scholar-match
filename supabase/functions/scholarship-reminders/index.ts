@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { evaluateMatch, type MatchProfile, type MatchRules } from "./matching.ts";
 
 // Deadline reminders (7 days and 2 days out) for matching students.
 // Skips students who unsubscribed; every email carries a one-click unsubscribe.
@@ -34,15 +35,7 @@ function esc(s: unknown): string {
 
 function isMatch(student: Record<string, unknown>, rules: Record<string, unknown> | null): boolean {
   if (!student.email) return false;
-  if (!rules) return true;
-  const schools = (rules.eligible_schools as string[] | null) ?? [];
-  if (schools.length > 0 && !schools.includes(student.school as string)) return false;
-  if (rules.min_gpa && (student.gpa as number) < (rules.min_gpa as number)) return false;
-  if (rules.graduation_year_min && (student.graduation_year as number) < (rules.graduation_year_min as number)) return false;
-  if (rules.graduation_year_max && (student.graduation_year as number) > (rules.graduation_year_max as number)) return false;
-  const majors = (rules.eligible_majors as string[] | null) ?? [];
-  if (majors.length > 0 && !majors.includes(student.major as string)) return false;
-  return true;
+  return evaluateMatch(student as unknown as MatchProfile, rules as MatchRules | null).verdict !== "ineligible";
 }
 
 serve(async (req) => {

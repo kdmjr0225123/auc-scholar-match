@@ -5,14 +5,20 @@ import { supabase } from '@/integrations/supabase/client';
 import { StudentProfile, Scholarship, EligibilityRule, School } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
 import '@/styles/elevaid.css';
-import { GraduationCap, Calendar, ExternalLink, ChevronDown, ChevronUp, ChevronRight, Star, User, Check, Undo2, Loader2, CheckCircle2, Download, Sparkles } from 'lucide-react';
+import { GraduationCap, Calendar, ExternalLink, ChevronRight, Star, User, Check, Undo2, Loader2, CheckCircle2, Download, Sparkles } from 'lucide-react';
 import { getSchoolTheme } from '@/lib/schoolTheme';
+import { evaluateMatch, matchLabel, matchRank, type MatchResult } from '@/lib/matching';
 
 interface MatchedScholarship extends Scholarship {
-  matchPercentage: number;
-  matchReasons: string[];
-  eligibilityRules: EligibilityRule;
+  match: MatchResult;
+  eligibilityRules: EligibilityRule | null;
 }
+
+// Award amounts can be missing (fully funded programs, "varies").
+const formatAward = (amount: number | null | undefined): string =>
+  amount && Number(amount) > 0 ? `$${Number(amount).toLocaleString('en-US')}` : 'Award varies';
+
+const isStrong = (m: MatchResult) => m.verdict === 'eligible' && m.targeted;
 
 interface AppliedScholarship {
   applicationId: string;
@@ -58,7 +64,6 @@ export default function Dashboard() {
   const [view, setView] = useState<'matches' | 'applied'>('matches');
   const [resumeBusy, setResumeBusy] = useState(false);
   const [revealed, setRevealed] = useState(false);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [slowLoad, setSlowLoad] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const bannerRef = useRef<HTMLDivElement>(null);
@@ -67,7 +72,9 @@ export default function Dashboard() {
   // list — they live in their own Applied section instead.
   const openMatches = matched.filter(m => !appliedIds.has(m.id));
   const totalAvailable = openMatches.reduce((s, m) => s + (m.award_amount || 0), 0);
-  const strongMatches = openMatches.filter(m => m.matchPercentage >= 80).length;
+  const strongMatches = openMatches.filter(m => isStrong(m.match)).length;
+  const needsDetails = openMatches.filter(m => m.match.verdict === 'check').length;
+  const profileIncomplete = !!profile && (profile.first_gen == null || profile.pell_eligible == null || !profile.home_state);
   const animatedTotal = useCounter(totalAvailable, 1600, revealed);
 
   useEffect(() => {
@@ -145,60 +152,26 @@ export default function Dashboard() {
     }
   };
 
+  // Shared engine (src/lib/matching.ts): the same rules decide what students
+  // see here and what they're emailed about. Ineligible scholarships are hidden;
+  // "check" ones are shown with what the student needs to confirm.
   const calculateMatches = (profile: StudentProfile, scholarships: any[]): MatchedScholarship[] => {
-    return scholarships.map(scholarship => {
-      const rules = scholarship.eligibility_rules;
-      if (!rules) return null;
-      const matchReasons: string[] = [];
-      const failReasons: string[] = [];
-      let totalCriteria = 0;
-      let metCriteria = 0;
-
-      totalCriteria++;
-      const schoolMatch = !rules.eligible_schools || rules.eligible_schools.length === 0 || rules.eligible_schools.includes(profile.school);
-      if (!schoolMatch) return null;
-      metCriteria++;
-      matchReasons.push(`School: ${formatSchool(profile.school)} is eligible`);
-
-      totalCriteria++;
-      const yearInRange =
-        (!rules.graduation_year_min || profile.graduation_year >= rules.graduation_year_min) &&
-        (!rules.graduation_year_max || profile.graduation_year <= rules.graduation_year_max);
-      if (!yearInRange) return null;
-      metCriteria++;
-      if (rules.graduation_year_min && rules.graduation_year_max) {
-        matchReasons.push(`Graduation Year: ${profile.graduation_year} is within ${rules.graduation_year_min}–${rules.graduation_year_max}`);
-      } else {
-        matchReasons.push(`Graduation Year: ${profile.graduation_year} (no restriction)`);
-      }
-
-      if (rules.min_gpa || rules.max_gpa) {
-        totalCriteria++;
-        const gpaMatch = (!rules.min_gpa || profile.gpa >= rules.min_gpa) && (!rules.max_gpa || profile.gpa <= rules.max_gpa);
-        if (gpaMatch) {
-          metCriteria++;
-          if (rules.min_gpa) matchReasons.push(`GPA: ${profile.gpa.toFixed(1)} ≥ ${rules.min_gpa.toFixed(1)} minimum`);
-        } else {
-          if (rules.min_gpa && profile.gpa < rules.min_gpa) failReasons.push(`GPA: ${profile.gpa.toFixed(1)} below ${rules.min_gpa.toFixed(1)} minimum`);
-        }
-      }
-
-      if (rules.eligible_majors?.length > 0) {
-        totalCriteria++;
-        const majorMatch = rules.eligible_majors.includes(profile.major);
-        if (majorMatch) { metCriteria++; matchReasons.push(`Major: ${profile.major} is eligible`); }
-        else failReasons.push(`Major: ${profile.major} not in eligible list`);
-      }
-
-      return {
-        ...scholarship,
-        matchPercentage: Math.round((metCriteria / totalCriteria) * 100),
-        matchReasons: [...matchReasons.map(r => `pass:${r}`), ...failReasons.map(r => `fail:${r}`)],
-        eligibilityRules: rules,
-      } as MatchedScholarship;
-    })
-    .filter((s): s is MatchedScholarship => s !== null)
-    .sort((a, b) => b.matchPercentage - a.matchPercentage);
+    return scholarships
+      .map(scholarship => {
+        const raw = scholarship.eligibility_rules;
+        const rules: EligibilityRule | null = Array.isArray(raw) ? raw[0] ?? null : raw ?? null;
+        const ruleSet = rules ? { ...rules, min_gpa: rules.min_gpa ?? scholarship.min_gpa ?? null } : (scholarship.min_gpa ? { min_gpa: scholarship.min_gpa } : null);
+        const match = evaluateMatch(profile, ruleSet);
+        return { ...scholarship, match, eligibilityRules: rules } as MatchedScholarship;
+      })
+      .filter(s => s.match.verdict !== 'ineligible')
+      .sort((a, b) => {
+        const r = matchRank(a.match) - matchRank(b.match);
+        if (r !== 0) return r;
+        const da = a.deadline ? Date.parse(a.deadline) : Infinity;
+        const db = b.deadline ? Date.parse(b.deadline) : Infinity;
+        return da - db;
+      });
   };
 
   const handleMarkApplied = async (scholarship: MatchedScholarship) => {
@@ -364,6 +337,13 @@ export default function Dashboard() {
         .dc-reason { font-size: 0.66rem; line-height: 1.4; }
         .dc-reason.pass { color: var(--ev-success); }
         .dc-reason.fail { color: var(--ev-danger); }
+        .dc-reason.check { color: var(--ev-gold-600, #9a6b00); }
+        .dc-reason.open { color: var(--ev-ink-faint); }
+        .dc-who { font-size: 0.72rem; line-height: 1.45; color: var(--ev-ink-soft, var(--ev-ink)); margin-bottom: 0.55rem; }
+        .dash-details-cta { margin-bottom: 0.75rem; }
+        .dash-legal { display: flex; justify-content: center; flex-wrap: wrap; gap: 1rem; font-size: 0.72rem; padding: 2rem 0 0.5rem; }
+        .dash-legal a { color: var(--ev-ink-faint); text-decoration: none; }
+        .dash-legal a:hover { color: var(--ev-ink); }
         .dc-apply { margin-top: auto; }
         .dc-view { margin-top: auto; }
         .dc-mark-applied {
@@ -472,7 +452,7 @@ export default function Dashboard() {
               </div>
               <div>
                 <div className="rev-stat-n">{strongMatches}</div>
-                <div className="rev-stat-l">100% match</div>
+                <div className="rev-stat-l">Strong matches</div>
               </div>
               <div>
                 <div className="rev-stat-n">{profile?.gpa.toFixed(1)}</div>
@@ -480,6 +460,17 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+
+          {profileIncomplete && needsDetails > 0 && (
+            <Link to="/profile#about" className="dash-resume-cta dash-details-cta">
+              <div className="dash-resume-cta-icon"><Check size={18} /></div>
+              <div className="dash-resume-cta-text">
+                <div className="dash-resume-cta-title">Confirm {needsDetails} more match{needsDetails === 1 ? '' : 'es'}</div>
+                <div className="dash-resume-cta-sub">Answer 3 optional questions (first-gen, Pell Grant, home state) so we can tell you exactly what you qualify for.</div>
+              </div>
+              <ChevronRight size={16} className="dash-resume-cta-arrow" />
+            </Link>
+          )}
 
           <Link to="/resume-review" className="dash-resume-cta">
             <div className="dash-resume-cta-icon"><Sparkles size={18} /></div>
@@ -520,17 +511,17 @@ export default function Dashboard() {
               </div>
             ) : (
               <>
-                <div className="dash-section-label">Your matches — sorted by best fit</div>
+                <div className="dash-section-label">Your matches — best fit first, then soonest deadline</div>
                 <div className="dash-grid">
                   {openMatches.map((s, i) => (
                     <div
                       key={s.id}
-                      className={`ev-card-light dc${s.matchPercentage >= 80 ? ' winner' : ''}`}
+                      className={`ev-card-light dc${isStrong(s.match) ? ' winner' : ''}`}
                       style={{ animationDelay: `${0.12 + i * 0.05}s` }}
                     >
                       <div className="dc-top">
                         <div className="dc-name">{s.name}</div>
-                        <div className={`ev-badge ${s.matchPercentage >= 80 ? 'ev-badge-success' : 'ev-badge-gold'}`}>{s.matchPercentage}%</div>
+                        <div className={`ev-badge ${s.match.verdict === 'eligible' ? 'ev-badge-success' : 'ev-badge-gold'}`}>{matchLabel(s.match)}</div>
                       </div>
                       <div className="dc-provider">{s.provider}</div>
                       {(s as any).apply_type === 'direct_form' ? (
@@ -543,48 +534,30 @@ export default function Dashboard() {
                         </div>
                       ) : null}
                       <div className="dc-meta">
-                        <span className="dc-amt">${s.award_amount?.toLocaleString()}</span>
+                        <span className="dc-amt">{formatAward(s.award_amount)}</span>
                         <span className="dc-date">
                           <Calendar size={12} />
                           {s.deadline ? new Date(s.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'No deadline'}
                         </span>
                       </div>
-                      <div className="dc-bar">
-                        <div className="dc-bar-fill" style={{ width: `${s.matchPercentage}%`, background: s.matchPercentage >= 80 ? 'var(--ev-success)' : 'var(--ev-gold)' }} />
-                      </div>
+                      {s.eligibilityRules?.eligibility_summary && (
+                        <div className="dc-who">{s.eligibilityRules.eligibility_summary}</div>
+                      )}
                       <div className="dc-reasons">
-                        {s.matchReasons.map((r, ri) => {
-                          const pass = r.startsWith('pass:');
-                          const text = r.replace(/^pass:|^fail:/, '');
-                          return (
-                            <div key={ri} className={`dc-reason ${pass ? 'pass' : 'fail'}`}>{pass ? '✓' : '✗'} {text}</div>
-                          );
-                        })}
+                        {s.match.reasons.map((text, ri) => (
+                          <div key={`r${ri}`} className="dc-reason pass">✓ {text}</div>
+                        ))}
+                        {s.match.checks.map((text, ci) => (
+                          <div key={`c${ci}`} className="dc-reason check">? {text}</div>
+                        ))}
+                        {s.match.reasons.length === 0 && s.match.checks.length === 0 && (
+                          <div className="dc-reason open">Open to all current undergraduates</div>
+                        )}
                       </div>
-                      {s.matchPercentage >= 80 ? (
+                      {s.application_url && (
                         <a className="ev-btn ev-btn-dark ev-btn-block dc-apply" href={s.application_url} target="_blank" rel="noopener noreferrer">
-                          Apply on External Site <ExternalLink size={13} />
+                          Apply on sponsor site <ExternalLink size={13} />
                         </a>
-                      ) : (
-                        <>
-                          <button
-                            className="ev-btn ev-btn-outline-light ev-btn-block dc-view"
-                            onClick={() => setExpandedId(expandedId === s.id ? null : s.id)}
-                          >
-                            {expandedId === s.id ? <>Hide Details <ChevronUp size={13} /></> : <>View Details <ChevronDown size={13} /></>}
-                          </button>
-                          {expandedId === s.id && s.application_url && (
-                            <a
-                              className="ev-btn ev-btn-dark ev-btn-block dc-apply"
-                              href={s.application_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              style={{ marginTop: '0.5rem' }}
-                            >
-                              Visit Application Site <ExternalLink size={13} />
-                            </a>
-                          )}
-                        </>
                       )}
                       {(s as any).apply_notes && (
                         <div style={{display:'flex',gap:'0.35rem',fontSize:'0.67rem',color:'var(--ev-ink-faint)',lineHeight:1.45,marginTop:'0.3rem',marginBottom:'0.1rem'}}>
@@ -628,7 +601,7 @@ export default function Dashboard() {
                     </div>
                     <div className="dc-provider">{a.scholarship.provider}</div>
                     <div className="dc-meta">
-                      <span className="dc-amt">${a.scholarship.award_amount?.toLocaleString()}</span>
+                      <span className="dc-amt">{formatAward(a.scholarship.award_amount)}</span>
                       <span className="dc-date">
                         <Calendar size={12} />
                         {a.scholarship.deadline ? new Date(a.scholarship.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'No deadline'}
@@ -656,6 +629,12 @@ export default function Dashboard() {
               </div>
             </>
           )}
+
+          <div className="dash-legal">
+            <Link to="/privacy">Privacy</Link>
+            <Link to="/terms">Terms</Link>
+            <a href="mailto:support@elevaid.pro">support@elevaid.pro</a>
+          </div>
         </div>
 
         <nav className="dash-tabbar" aria-label="Primary">

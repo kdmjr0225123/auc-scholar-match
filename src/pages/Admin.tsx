@@ -489,9 +489,9 @@ export default function Admin() {
       toast({ variant: 'destructive', title: 'Pipeline was not started', description: stringValue(detail?.error, error.message) });
       return;
     }
-    toast({ title: 'Pipeline dispatched', description: 'The GitHub workflow has been queued.' });
+    const result = objectValue(data);
+    toast({ title: 'Audit finished', description: stringValue(result.notes, 'The audit gate ran. See run history for details.') });
     await loadConsoleData();
-    void data;
   };
 
   const savePin = async () => {
@@ -525,52 +525,44 @@ export default function Admin() {
     setStagingRows((rows) => rows.map((row) => row.id === id ? { ...row, class_years: value } : row));
   };
 
-  const publishStage = async (row: StageRow) => {
+  // Owner "Approve" never publishes directly: it saves the edits and sends
+  // the row back through the same pre-publish gate the daily audit uses (rules,
+  // page checks, AI run-through), so nothing reaches students unchecked.
+  const publishStage = async (row: StageRow, runNow = true) => {
     const name = stringValue(row.name).trim();
-    const deadline = stringValue(row.deadline).trim();
     const url = stringValue(row.application_url).trim();
-    if (!name || !deadline || !url) {
-      toast({ variant: 'destructive', title: 'Missing required fields', description: 'Name, deadline, and application URL are required before approval.' });
-      return;
+    if (!name || !url) {
+      toast({ variant: 'destructive', title: 'Missing required fields', description: 'Name and application URL are required.' });
+      return false;
     }
-    const { data: inserted, error } = await supabase.from('scholarships').insert({
+    const amount = numberValue(row.award_amount);
+    const deadline = stringValue(row.deadline).trim();
+    const { error } = await supabase.from('scholarship_staging').update({
       name,
-      provider: stringValue(row.provider, 'Unknown provider'),
-      description: stringValue(row.description),
-      award_amount: numberValue(row.award_amount),
-      deadline,
+      title: name,
+      provider: stringValue(row.provider) || null,
+      description: stringValue(row.description) || null,
+      award_amount: amount ? String(amount) : null,
+      deadline: deadline || null,
       application_url: url,
-      is_active: true,
-      pipeline_status: 'approved',
-    }).select('id').single();
+      status: 'needs_review',
+      audit_passed: null,
+      audit_failure: 'OWNER: sent to the gate from the console',
+    }).eq('id', row.id);
     if (error) {
-      toast({ variant: 'destructive', title: 'Could not publish scholarship', description: error.message });
-      return;
+      toast({ variant: 'destructive', title: 'Could not send to the gate', description: error.message });
+      return false;
     }
-    const years = Array.isArray(row.class_years)
-      ? row.class_years.map((year) => Number(year)).filter(Number.isFinite)
-      : stringValue(row.class_years).split(',').map((year) => year.trim()).filter(Boolean).map(Number).filter(Number.isFinite);
-    const { error: rulesError } = await supabase.from('eligibility_rules').insert({
-      scholarship_id: inserted.id,
-      eligible_schools: Array.isArray(row.eligible_schools) ? row.eligible_schools : [],
-      eligible_majors: Array.isArray(row.eligible_majors) ? row.eligible_majors : [],
-      keywords: [],
-      graduation_year_min: years.length ? Math.min(...years) : null,
-      graduation_year_max: years.length ? Math.max(...years) : null,
-    });
-    if (rulesError) {
-      toast({ variant: 'destructive', title: 'Scholarship published without eligibility rules', description: rulesError.message });
-      return;
+    if (runNow) {
+      toast({ title: 'Sent to the gate', description: 'Running the audit now; it publishes only if every check passes.' });
+      await runPipeline();
     }
-    const { error: stageError } = await supabase.from('scholarship_staging').update({ status: 'published' }).eq('id', row.id);
-    if (stageError) toast({ variant: 'destructive', title: 'Published, but staging status was not updated', description: stageError.message });
-    else toast({ title: 'Scholarship approved and published' });
-    await loadConsoleData();
+    return true;
   };
 
   const rejectStage = async (row: StageRow, reason: string) => {
     const { error } = await supabase.from('scholarship_staging')
-      .update({ status: 'rejected', rejection_reason: reason })
+      .update({ status: 'rejected', audit_passed: false, audit_failure: `OWNER REJECTED: ${reason}`.slice(0, 1000) })
       .eq('id', row.id);
     if (error) toast({ variant: 'destructive', title: 'Could not reject row', description: error.message });
     else {
@@ -587,7 +579,12 @@ export default function Admin() {
       if (!reason) return;
       for (const row of rows) await rejectStage(row, reason);
     } else {
-      for (const row of rows) await publishStage(row);
+      let sent = 0;
+      for (const row of rows) if (await publishStage(row, false)) sent++;
+      if (sent) {
+        toast({ title: `Sent ${sent} to the gate`, description: 'Running the audit now.' });
+        await runPipeline();
+      }
     }
     setSelectedStage(new Set());
   };
@@ -753,14 +750,14 @@ export default function Admin() {
 
           {activeView === 'pipeline' && <>
             <div className="console-eyebrow">Operations</div><h2 className="console-title">Pipeline</h2><p className="console-subtitle">Dispatch and inspect automated scholarship pipeline runs.</p>
-            <section className="console-panel" style={{ marginTop: 20 }}><div className="console-panel-head"><h2>Run pipeline now</h2><button className="console-button primary" disabled={pipelineBusy || pipelineConfigured !== true} title={pipelineConfigured === false ? 'Pipeline workflow not configured' : undefined} onClick={() => void runPipeline()}>{pipelineBusy ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}{pipelineConfigured === false ? 'Pipeline workflow not configured' : 'Run pipeline now'}</button></div><div className="console-panel-body"><p className="console-muted" style={{ margin: 0, fontSize: 12 }}>{pipelineConfigured === null ? 'Checking workflow configuration…' : pipelineConfigured ? 'A GitHub Actions workflow dispatch will be sent.' : 'Pipeline workflow not configured.'}</p></div></section>
+            <section className="console-panel" style={{ marginTop: 20 }}><div className="console-panel-head"><h2>Run audit now</h2><button className="console-button primary" disabled={pipelineBusy || pipelineConfigured !== true} title={pipelineConfigured === false ? 'Audit not configured' : undefined} onClick={() => void runPipeline()}>{pipelineBusy ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}{pipelineConfigured === false ? 'Audit not configured' : 'Run audit now'}</button></div><div className="console-panel-body"><p className="console-muted" style={{ margin: 0, fontSize: 12 }}>{pipelineConfigured === null ? 'Checking configuration…' : pipelineConfigured ? 'Runs the 7:30am audit gate immediately: re-checks live scholarships and promotes, holds or rejects everything waiting in staging. New scholarships are found by the 6:47am monitor, not this button. Takes up to 2 minutes.' : 'Audit not configured.'}</p></div></section>
             <section className="console-panel" style={{ marginTop: 14 }}><div className="console-panel-head"><h2>Run history</h2><span className="console-status">{pipelineLogs.length} runs</span></div><div className="console-table-wrap"><table className="console-table"><thead><tr><th>Time</th><th>Type</th><th>Checked</th><th>Staged / approved</th><th>Quarantined</th><th>Deactivated</th><th>Notes</th></tr></thead><tbody>{pipelineLogs.map((row) => <tr key={row.id}><td>{shortDate(row.ran_at)}</td><td>{stringValue(row.status, 'pipeline')}</td><td>{numberValue(row.scholarships_checked)}</td><td>{numberValue(row.scholarships_approved)} / {numberValue(row.scholarships_staged)}</td><td>{numberValue(row.scholarships_quarantined)}</td><td>{numberValue(row.scholarships_deactivated)}</td><td><details><summary style={{ cursor: 'pointer' }}>View</summary><p style={{ maxWidth: 360, whiteSpace: 'pre-wrap' }}>{stringValue(row.notes, 'No notes.')}</p></details></td></tr>)}</tbody></table>{!pipelineLogs.length && <div className="console-empty">No pipeline runs have been logged.</div>}</div></section>
           </>}
 
           {activeView === 'review' && <>
             <div className="console-eyebrow">Scholarship intake</div><h2 className="console-title">Review queue</h2><p className="console-subtitle">Review incoming scholarships before publishing to the live inventory.</p>
             {stagingUnavailable ? <div className="console-alert" style={{ marginTop: 18 }}><AlertTriangle size={15} />Staging data is unavailable. Confirm the table is exposed and has an admin-session RLS policy.</div> : <>
-              <div className="console-tools" style={{ margin: '18px 0 10px' }}><button className="console-button" disabled={!selectedStage.size} onClick={() => void bulkStageAction('approve')}><Check size={14} />Approve selected</button><button className="console-button danger" disabled={!selectedStage.size} onClick={() => void bulkStageAction('reject')}><X size={14} />Reject selected</button><span className="console-muted" style={{ fontSize: 12 }}>{selectedStage.size} selected</span></div>
+              <div className="console-tools" style={{ margin: '18px 0 10px' }}><button className="console-button" disabled={!selectedStage.size} onClick={() => void bulkStageAction('approve')}><Check size={14} />Send selected to gate</button><button className="console-button danger" disabled={!selectedStage.size} onClick={() => void bulkStageAction('reject')}><X size={14} />Reject selected</button><span className="console-muted" style={{ fontSize: 12 }}>{selectedStage.size} selected</span></div>
               <div className="console-panel console-table-wrap"><table className="console-table"><thead><tr><th><input aria-label="Select all" type="checkbox" checked={activeStages.length > 0 && activeStages.every((row) => selectedStage.has(row.id))} onChange={(event) => setSelectedStage(event.target.checked ? new Set(activeStages.map((row) => row.id)) : new Set())} /></th><th>Scholarship</th><th>Amount</th><th>Deadline</th><th>Class years</th><th>Status</th><th>Source</th><th>Actions</th></tr></thead><tbody>
                 {activeStages.sort((left, right) => stringValue(left.deadline, '9999-12-31').localeCompare(stringValue(right.deadline, '9999-12-31'))).map((row) => {
                   const closing = row.deadline && new Date(row.deadline) >= now && new Date(row.deadline) <= twoWeeks;
@@ -769,7 +766,7 @@ export default function Admin() {
                     <td><input className="console-field" type="number" min="0" value={stringValue(String(row.award_amount ?? ''))} onChange={(event) => updateStageValue(row.id, 'award_amount', event.target.value)} /></td>
                     <td><input className="console-field" type="date" value={stringValue(row.deadline)} onChange={(event) => updateStageValue(row.id, 'deadline', event.target.value)} />{closing && <div style={{ marginTop: 5 }}><span className="console-status warn">Closing soon</span></div>}</td>
                     <td><input className="console-field" aria-label="Eligible class years, comma separated" placeholder="2027, 2028" value={Array.isArray(row.class_years) ? row.class_years.join(', ') : stringValue(row.class_years)} onChange={(event) => updateStageClassYears(row.id, event.target.value)} /></td>
-                    <td>{stageStatusBadge(stringValue(row.status, 'needs_review'))}</td><td>{stringValue(row.source, 'Unknown')}</td><td><div className="console-tools"><button className="console-button primary" onClick={() => void publishStage(row)}>Approve</button><button className="console-button danger" onClick={() => { const reason = window.prompt('Reason for rejection:'); if (reason) void rejectStage(row, reason); }}>Reject</button></div></td></tr>;
+                    <td>{stageStatusBadge(stringValue(row.status, 'needs_review'))}</td><td>{stringValue(row.source, 'Unknown')}</td><td><div className="console-tools"><button className="console-button primary" title="Re-runs the pre-publish gate on this row; it goes live only if every check passes" onClick={() => void publishStage(row)}>Send to gate</button><button className="console-button danger" onClick={() => { const reason = window.prompt('Reason for rejection:'); if (reason) void rejectStage(row, reason); }}>Reject</button></div></td></tr>;
                 })}
               </tbody></table>{!activeStages.length && <div className="console-empty">The review queue is clear.</div>}</div>
             </>}

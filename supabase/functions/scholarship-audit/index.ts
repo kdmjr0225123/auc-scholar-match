@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { evaluateMatch, MAJOR_FIELDS, REQUIREMENT_CODES, type MatchRules } from "./matching.ts";
 
 // Pipeline v1 gate. Runs on staged rows (promote / hold / reject) and on live
 // rows (deactivate on failure). Live rows are never deleted: deactivation keeps
@@ -169,14 +170,12 @@ function testSchoolEligibility(eligibleSchools: string[]): CriterionResult {
     : fail(`No overlap with target schools -- eligible: ${eligibleSchools.join(", ")}`);
 }
 
-function testMatchesSomeStudent(eligibleSchools: string[], eligibleMajors: string[], minGpa: number | null, students: Record<string, unknown>[]): CriterionResult {
+// "Could at least one enrolled student apply?" uses the same engine as the
+// dashboard; a student who only needs to confirm something still counts.
+function testMatchesSomeStudent(rules: MatchRules | null, students: Record<string, unknown>[]): CriterionResult {
   if (students.length === 0) return pass("No enrolled students yet -- gate skipped");
-  const ok = students.some((s) => {
-    if (eligibleSchools.length > 0 && !eligibleSchools.includes(s.school as string)) return false;
-    if (eligibleMajors.length > 0 && !eligibleMajors.includes(s.major as string)) return false;
-    if (minGpa && (s.gpa as number) < minGpa) return false;
-    return true;
-  });
+  // deno-lint-ignore no-explicit-any
+  const ok = students.some((s) => evaluateMatch(s as any, rules).verdict !== "ineligible");
   return ok ? pass("Matches at least one enrolled student") : hold("Zero current students match this scholarship");
 }
 
@@ -297,7 +296,47 @@ type AiVerdict = {
   auc_eligible: string;
   red_flags: string[];
   summary: string;
+  eligibility?: {
+    schools?: unknown;
+    class_years?: unknown;
+    min_gpa?: unknown;
+    major_fields?: unknown;
+    requirements?: unknown;
+    who_can_apply?: unknown;
+  };
 };
+
+export type ExtractedRules = {
+  eligible_schools: string[];
+  class_years: string[];
+  min_gpa: number | null;
+  major_fields: string[];
+  requirements: string[];
+  eligibility_summary: string | null;
+};
+
+const AUC_SCHOOLS = ["morehouse", "spelman", "clark_atlanta"];
+const CLASS_YEARS = ["freshman", "sophomore", "junior", "senior"];
+
+const strList = (v: unknown, allowed: readonly string[]): string[] =>
+  Array.isArray(v) ? [...new Set(v.map((x) => String(x).trim().toLowerCase()).filter((x) => allowed.includes(x)))] : [];
+
+// Turn the model's eligibility block into rules we can store. Anything not on
+// the allowed lists is dropped, so a bad extraction can only make a scholarship
+// MORE open, never hide it from students who qualify.
+function sanitizeRules(e: AiVerdict["eligibility"]): ExtractedRules {
+  const schools = strList(e?.schools, AUC_SCHOOLS);
+  const years = strList(e?.class_years, CLASS_YEARS);
+  const gpa = Number(e?.min_gpa);
+  return {
+    eligible_schools: schools.length === AUC_SCHOOLS.length ? [] : schools,
+    class_years: years.length === CLASS_YEARS.length ? [] : years,
+    min_gpa: Number.isFinite(gpa) && gpa > 0 && gpa <= 4.0 ? Math.round(gpa * 100) / 100 : null,
+    major_fields: (() => { const f = strList(e?.major_fields, MAJOR_FIELDS); return f.length === MAJOR_FIELDS.length ? [] : f; })(),
+    requirements: strList(e?.requirements, REQUIREMENT_CODES),
+    eligibility_summary: typeof e?.who_can_apply === "string" && e.who_can_apply.trim() ? e.who_can_apply.trim().slice(0, 300) : null,
+  };
+}
 
 const AI_SYSTEM_PROMPT = `You verify scholarship listings for Elevaid before they are shown to students.
 Students are CURRENT undergraduates at Morehouse College, Spelman College and Clark Atlanta University in Atlanta, Georgia.
@@ -312,7 +351,14 @@ Return JSON with exactly these keys:
 - "current_undergrads_eligible": "yes", "no" or "unclear" -- can a current undergraduate (sophomore/junior/senior) apply, or is it only for high school seniors / incoming freshmen / graduate students?
 - "auc_eligible": "yes", "no" or "unclear" -- can a student at Morehouse/Spelman/Clark Atlanta apply? "no" if restricted to TMCF member schools, to named schools that are not these, or to residents of a US state other than Georgia.
 - "red_flags": array of short strings (fees to apply, requests for bank/SSN info, run-a-command instructions, mismatched sponsor, etc.). Empty array if none.
-- "summary": one sentence.`;
+- "summary": one sentence.
+- "eligibility": who may apply, read from the page. Include ONLY restrictions the page states explicitly; leave a list empty when the page sets no such restriction. Keys:
+  - "schools": subset of ["morehouse","spelman","clark_atlanta"] ONLY if the award is limited to specific named schools. Empty when open to students at any accredited college, any HBCU, or any UNCF member school.
+  - "class_years": subset of ["freshman","sophomore","junior","senior"] = the year a student is in NOW (the 2026-27 school year) when applying. "Rising junior" means a current sophomore. Empty when any undergraduate may apply.
+  - "min_gpa": minimum GPA on a 4.0 scale as a number, or null.
+  - "major_fields": subset of ["stem","business","health","social_science","humanities","arts_media","education"] ONLY if limited to certain fields of study. Empty when any major may apply.
+  - "requirements": subset of ["first_gen","pell_eligible","financial_need","georgia_resident","greek_member","women","men","us_citizen"] for each requirement the page states (us_citizen also covers "U.S. citizen or permanent resident"; greek_member = must belong to a specific fraternity or sorority).
+  - "who_can_apply": one plain sentence a student can read, e.g. "Juniors and seniors in STEM majors with a 3.0 GPA who are U.S. citizens."`;
 
 async function aiReview(row: { name: string; provider: string; amount: unknown; deadline: unknown; description: string }, url: string, pageText: string): Promise<{ result: CriterionResult; verdict: AiVerdict | null }> {
   if (!GROQ_API_KEY) return { result: hold("AI run-through unavailable (GROQ_API_KEY not set) -- not promoted"), verdict: null };
@@ -385,7 +431,6 @@ function aiQueue<T>(fn: () => Promise<T>): Promise<T> {
 
 async function auditLive(s: Record<string, unknown>, rules: Record<string, unknown> | null, students: Record<string, unknown>[], supabase: ReturnType<typeof createClient>) {
   const eligibleSchools = (rules?.eligible_schools as string[] | null) ?? [];
-  const eligibleMajors = (rules?.eligible_majors as string[] | null) ?? [];
   const minGpa = (rules?.min_gpa as number | null) ?? (s.min_gpa as number | null) ?? null;
   const url = s.application_url as string | null;
   const { tests: link, pageText } = await testLink(url);
@@ -397,7 +442,7 @@ async function auditLive(s: Record<string, unknown>, rules: Record<string, unkno
     lead_gen: testLeadGen((s.name as string) ?? "", (s.provider as string) ?? "", hostOf(url)),
     page_lead_gen: testPageLeadGen(pageText),
     school_eligibility: testSchoolEligibility(eligibleSchools),
-    matches_students: testMatchesSomeStudent(eligibleSchools, eligibleMajors, minGpa, students),
+    matches_students: testMatchesSomeStudent({ ...(rules ?? {}), min_gpa: minGpa } as MatchRules, students),
     ...link,
   };
   // Live rows: only hard failures deactivate. Holds (e.g. a timeout) are logged.
@@ -432,30 +477,39 @@ async function evaluateStaged(s: Record<string, unknown>, students: Record<strin
     description: testDescription(description),
     eligibility: testEligibility(text),
     lead_gen: testLeadGen(name, provider, hostOf(url)),
-    matches_students: testMatchesSomeStudent([], [], (s.min_gpa as number | null) ?? null, students),
+    matches_students: testMatchesSomeStudent({ min_gpa: (s.min_gpa as number | null) ?? null }, students),
     ...link,
     page_lead_gen: testPageLeadGen(pageText),
   };
+  let extracted: ExtractedRules | null = null;
   // The run-through only matters for rows that would otherwise be promoted;
   // skipping it for rows already failing keeps the AI cost proportional.
   if (summarize(criteria).passed && url) {
     criteria.page_identity = testPageIdentity(name, pageText);
     if (criteria.page_identity.pass) {
-      const { result } = await aiQueue(() => aiReview({ name, provider, amount: s.award_amount, deadline: s.deadline, description }, url, pageText));
+      const { result, verdict } = await aiQueue(() => aiReview({ name, provider, amount: s.award_amount, deadline: s.deadline, description }, url, pageText));
       criteria.ai_run_through = result;
+      if (verdict) {
+        extracted = sanitizeRules(verdict.eligibility);
+        // Staged min_gpa / class years from the monitor are a fallback only.
+        if (extracted.min_gpa === null && s.min_gpa) extracted.min_gpa = Number(s.min_gpa) || null;
+        if (extracted.class_years.length === 0) extracted.class_years = strList(s.allowed_class_years, CLASS_YEARS).length === CLASS_YEARS.length ? [] : strList(s.allowed_class_years, CLASS_YEARS);
+        criteria.matches_students = testMatchesSomeStudent(extracted, students);
+        if (!criteria.matches_students.pass) criteria.ai_run_through = hold(`Rules read from page match no enrolled student: ${extracted.eligibility_summary ?? "see page"}`);
+      }
     }
   }
-  return { url, name, criteria, ...summarize(criteria) };
+  return { url, name, criteria, extracted, ...summarize(criteria) };
 }
 
 async function auditStaged(s: Record<string, unknown>, students: Record<string, unknown>[], supabase: ReturnType<typeof createClient>) {
-  const { url, name, criteria, passed, hardFail, failures } = await evaluateStaged(s, students);
+  const { url, name, criteria, passed, hardFail, failures, extracted } = await evaluateStaged(s, students);
   const now = new Date().toISOString();
 
   if (passed && criteria.ai_run_through?.pass === true) {
     const awardRaw = s.award_amount as string | null;
     const awardNum = awardRaw ? parseFloat(String(awardRaw).replace(/[^0-9.]/g, "")) : null;
-    const years = s.allowed_class_years as string[] | null;
+    const years = extracted?.class_years ?? [];
     const { data: promoted, error } = await supabase.from("scholarships").insert({
       name,
       provider: s.provider as string,
@@ -463,8 +517,8 @@ async function auditStaged(s: Record<string, unknown>, students: Record<string, 
       award_amount: awardNum,
       deadline: s.deadline as string,
       application_url: url,
-      min_gpa: (s.min_gpa as number | null) ?? null,
-      allowed_class_years: years && years.length ? years.join(",") : null,
+      min_gpa: extracted?.min_gpa ?? (s.min_gpa as number | null) ?? null,
+      allowed_class_years: years.length ? years.join(",") : null,
       source_domain: hostOf(url) || (s.source_domain as string | null),
       application_requirements: (s.application_requirements as string | null) ?? null,
       is_active: true,
@@ -476,7 +530,19 @@ async function auditStaged(s: Record<string, unknown>, students: Record<string, 
       await supabase.from("scholarship_staging").update({ audit_ran_at: now, audit_criteria: criteria, audit_failure: `Promotion insert failed: ${error?.message ?? "unknown"}` }).eq("id", s.id);
       return { outcome: "error" as const, criteria };
     }
-    await supabase.from("eligibility_rules").insert({ scholarship_id: (promoted as Record<string, unknown>).id, eligible_schools: [], eligible_majors: [], keywords: [], min_gpa: (s.min_gpa as number | null) ?? null });
+    await supabase.from("eligibility_rules").insert({
+      scholarship_id: (promoted as Record<string, unknown>).id,
+      eligible_schools: extracted?.eligible_schools ?? [],
+      eligible_majors: [],
+      keywords: [],
+      min_gpa: extracted?.min_gpa ?? null,
+      class_years: extracted?.class_years ?? [],
+      major_fields: extracted?.major_fields ?? [],
+      requirements: extracted?.requirements ?? [],
+      eligibility_summary: extracted?.eligibility_summary ?? null,
+      rules_source: extracted ? "ai_page_read" : null,
+      rules_extracted_at: extracted ? now : null,
+    });
     await supabase.from("scholarship_staging").update({ status: "promoted", audit_passed: true, audit_ran_at: now, audit_criteria: criteria, audit_failure: null }).eq("id", s.id);
     return { outcome: "promoted" as const, criteria };
   }
@@ -521,7 +587,7 @@ serve(async (req) => {
   const body = await req.json().catch(() => ({}));
   const source: string = body.source ?? "manual";
 
-  const { data: students } = await supabase.from("student_profiles").select("id, school, major, gpa, graduation_year");
+  const { data: students } = await supabase.from("student_profiles").select("id, school, major, gpa, graduation_year, first_gen, pell_eligible, home_state, greek_org");
   const allStudents = (students ?? []) as Record<string, unknown>[];
 
   // Dry run: evaluate test cases (row-shaped objects) with the full staged
@@ -531,9 +597,45 @@ serve(async (req) => {
     const results = await runPool(cases, async (c) => {
       const r = await evaluateStaged(c, allStudents);
       const wouldPromote = r.passed && r.criteria.ai_run_through?.pass === true;
-      return { name: r.name, url: r.url, outcome: wouldPromote ? "promote" : r.hardFail ? "reject" : "hold", failures: r.failures, ai: r.criteria.ai_run_through?.reason ?? null };
+      return { name: r.name, url: r.url, outcome: wouldPromote ? "promote" : r.hardFail ? "reject" : "hold", failures: r.failures, ai: r.criteria.ai_run_through?.reason ?? null, rules: r.extracted };
     });
     return new Response(JSON.stringify({ dry_run: true, results }), { status: 200, headers: { "Content-Type": "application/json" } });
+  }
+
+  // Backfill: read eligibility rules from the live page for scholarships that
+  // were promoted before rules were extracted (or all, with force: true).
+  // Only eligibility_rules is written; nothing is promoted or deactivated.
+  // dry_run_rules: true returns what would be written without writing.
+  if (body.backfill_rules === true) {
+    const { data: rows } = await supabase.from("scholarships").select("id, name, provider, award_amount, deadline, description, application_url, min_gpa, allowed_class_years, eligibility_rules (*)").eq("is_active", true);
+    const targets = ((rows ?? []) as Record<string, unknown>[]).filter((r) => {
+      const er = Array.isArray(r.eligibility_rules) ? r.eligibility_rules[0] : r.eligibility_rules;
+      return body.force === true || !(er as Record<string, unknown> | null)?.rules_source;
+    });
+    const results = await runPool(targets, async (r) => {
+      const url = r.application_url as string | null;
+      if (!url) return { name: r.name, status: "skipped", reason: "no application_url" };
+      const { pageText } = await testLink(url);
+      if (pageText.length < MIN_PAGE_TEXT) return { name: r.name, status: "skipped", reason: `page text too short (${pageText.length} chars)` };
+      const { verdict } = await aiQueue(() => aiReview({ name: r.name as string, provider: (r.provider as string) ?? "", amount: r.award_amount, deadline: r.deadline, description: (r.description as string) ?? "" }, url, pageText));
+      if (!verdict) return { name: r.name, status: "skipped", reason: "AI read failed" };
+      const ex = sanitizeRules(verdict.eligibility);
+      if (ex.min_gpa === null && r.min_gpa) ex.min_gpa = Number(r.min_gpa) || null;
+      const reach = testMatchesSomeStudent(ex, allStudents);
+      if (body.dry_run_rules === true) return { name: r.name, status: "would_write", rules: ex, matches_students: reach.pass };
+      const now = new Date().toISOString();
+      const patch = { eligible_schools: ex.eligible_schools, class_years: ex.class_years, min_gpa: ex.min_gpa, major_fields: ex.major_fields, requirements: ex.requirements, eligibility_summary: ex.eligibility_summary, rules_source: "ai_page_read", rules_extracted_at: now, updated_at: now };
+      const er = Array.isArray(r.eligibility_rules) ? r.eligibility_rules[0] : r.eligibility_rules;
+      const { error } = er
+        ? await supabase.from("eligibility_rules").update(patch).eq("scholarship_id", r.id)
+        : await supabase.from("eligibility_rules").insert({ scholarship_id: r.id, eligible_majors: [], keywords: [], ...patch });
+      return { name: r.name, status: error ? "error" : "written", reason: error?.message, rules: ex, matches_students: reach.pass };
+    });
+    const written = results.filter((x) => x.status === "written").length;
+    if (body.dry_run_rules !== true) {
+      await supabase.from("pipeline_logs").insert({ ran_at: new Date().toISOString(), status: "rules_backfill", scholarships_checked: targets.length, scholarships_approved: written, scholarships_quarantined: 0, scholarships_deactivated: 0, notes: `Rules backfill: ${written}/${targets.length} written. ${results.filter((x) => x.status !== "written").map((x) => `${x.name}: ${x.status}${x.reason ? ` (${x.reason})` : ""}`).join("; ")}`.slice(0, 2000) });
+    }
+    return new Response(JSON.stringify({ backfill: true, targets: targets.length, written, results }), { status: 200, headers: { "Content-Type": "application/json" } });
   }
 
   const { data: session } = await supabase.from("audit_sessions").insert({ source, total_tested: 0, total_passed: 0, total_swept: 0, total_promoted: 0 }).select().single();

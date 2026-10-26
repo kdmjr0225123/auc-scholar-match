@@ -8,7 +8,9 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "sync:matching": "node scripts/sync-matching.mjs",
+    "test:matching": "node --experimental-strip-types --no-warnings scripts/test-matching.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

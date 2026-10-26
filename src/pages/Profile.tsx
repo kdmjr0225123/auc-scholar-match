@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import '@/styles/elevaid.css';
 import { ArrowLeft, Check, Star, User, Upload, FileText, X, Loader2 } from 'lucide-react';
 import { SCHOOL_THEME, getSchoolTheme } from '@/lib/schoolTheme';
+import { US_STATES, GREEK_ORGS, toTri, fromTri, type TriState } from '@/constants/profileOptions';
 
 const RESUME_MAX_BYTES = 8 * 1024 * 1024; // 8MB
 const RESUME_ACCEPT_EXT = ['pdf', 'doc', 'docx'];
@@ -35,6 +36,11 @@ export default function Profile() {
   const [form, setForm] = useState({
     first_name: '', last_name: '', school: '', major: '', graduation_year: '', gpa: '3.0',
   });
+  // Optional details that sharpen matching. Blank = not answered (never a "no").
+  const [about, setAbout] = useState<{ first_gen: TriState; pell_eligible: TriState; home_state: string; greek_org: string }>({
+    first_gen: '', pell_eligible: '', home_state: '', greek_org: '',
+  });
+  const [emailsOn, setEmailsOn] = useState(true);
   const [resumePath, setResumePath] = useState<string | null>(null);
   const [resumeBusy, setResumeBusy] = useState(false);
   const resumeInputRef = useRef<HTMLInputElement>(null);
@@ -57,12 +63,26 @@ export default function Profile() {
           gpa: data.gpa?.toString() || '3.0',
         });
         setResumePath(data.resume_url || null);
+        setAbout({
+          first_gen: toTri(data.first_gen),
+          pell_eligible: toTri(data.pell_eligible),
+          home_state: data.home_state || '',
+          greek_org: data.greek_org || '',
+        });
+        setEmailsOn(!data.email_opt_out);
       }
       if (error) console.error('Error fetching profile:', error);
       setLoading(false);
     };
     fetchProfile();
   }, [user]);
+
+  // Deep link from the dashboard ("Confirm N more matches") lands on the
+  // optional questions.
+  useEffect(() => {
+    if (loading || window.location.hash !== '#about') return;
+    document.getElementById('about')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [loading]);
 
   // Resume-on-file: stored at a stable path per user (`{user_id}/resume.<ext>`)
   // so re-uploading naturally replaces the old file via `upsert`, and the
@@ -157,6 +177,11 @@ export default function Profile() {
           major: form.major,
           graduation_year: parseInt(form.graduation_year),
           gpa: parseFloat(form.gpa),
+          first_gen: fromTri(about.first_gen),
+          pell_eligible: fromTri(about.pell_eligible),
+          home_state: about.home_state || null,
+          greek_org: about.greek_org || null,
+          email_opt_out: !emailsOn,
         })
         .eq('user_id', user.id);
       if (error) throw error;
@@ -244,6 +269,25 @@ export default function Profile() {
         }
         .pr-resume-action:hover { color: #fff; border-color: var(--ev-border-strong); }
         .pr-resume-action.danger:hover { color: var(--ev-danger); border-color: var(--ev-danger); }
+
+        .pr-hint { font-size: 0.78rem; color: var(--ev-text-muted); line-height: 1.5; }
+        .pr-q { display: flex; flex-direction: column; gap: 0.45rem; }
+        .pr-q-label { font-size: 0.85rem; font-weight: 600; color: #fff; }
+        .pr-seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem; }
+        .pr-seg-btn { border: 1px solid var(--ev-border); border-radius: var(--ev-radius-sm); padding: 0.6rem 0.5rem; cursor: pointer; font-size: 0.8rem; font-weight: 600; color: var(--ev-text-muted); background: var(--ev-surface); transition: all 0.15s; }
+        .pr-seg-btn.selected { background: var(--ev-gold-soft); border-color: var(--ev-gold-border); color: #fff; }
+        .pr-select { appearance: none; -webkit-appearance: none; background-image: linear-gradient(45deg, transparent 50%, rgba(255,255,255,0.6) 50%), linear-gradient(135deg, rgba(255,255,255,0.6) 50%, transparent 50%); background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50%; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 2rem; }
+        .pr-select option { color: #0A1628; }
+        .pr-toggle { display: flex; align-items: center; justify-content: space-between; gap: 1rem; border: 1px solid var(--ev-border); border-radius: var(--ev-radius-md); padding: 0.9rem 1rem; background: var(--ev-surface); cursor: pointer; }
+        .pr-toggle-text { font-size: 0.85rem; font-weight: 600; color: #fff; }
+        .pr-toggle-sub { font-size: 0.72rem; color: var(--ev-text-muted); margin-top: 0.15rem; line-height: 1.45; }
+        .pr-switch { position: relative; width: 42px; height: 24px; flex-shrink: 0; border-radius: 999px; background: var(--ev-surface-2); border: 1px solid var(--ev-border-strong); transition: background 0.15s; }
+        .pr-switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: transform 0.15s; }
+        .pr-switch.on { background: var(--ev-gold); border-color: var(--ev-gold); }
+        .pr-switch.on::after { transform: translateX(18px); }
+        .pr-legal { display: flex; justify-content: center; gap: 1rem; font-size: 0.72rem; padding: 0.5rem 0 1rem; }
+        .pr-legal a { color: var(--ev-text-muted); text-decoration: none; }
+        .pr-legal a:hover { color: #fff; }
 
         .pr-tabbar { display: none; }
         @media (max-width: 680px) {
@@ -367,6 +411,59 @@ export default function Profile() {
 
           <hr className="ev-divider-dark" />
 
+          <div className="pr-section" id="about" style={{ scrollMarginTop: '1rem' }}>
+            <div className="ev-label">About you (optional)</div>
+            <div className="pr-hint">
+              Some scholarships are only for first-generation students, Pell Grant recipients, Georgia residents or members of a specific organization. Answering lets us confirm those matches. Skip anything you'd rather not share.
+            </div>
+            <div className="pr-q">
+              <div className="pr-q-label" id="q-first-gen">Are you the first in your family to go to college?</div>
+              <div className="pr-seg" role="radiogroup" aria-labelledby="q-first-gen">
+                {([['yes', 'Yes'], ['no', 'No'], ['', 'Skip']] as [TriState, string][]).map(([v, label]) => (
+                  <button key={label} type="button" role="radio" aria-checked={about.first_gen === v} className={`pr-seg-btn${about.first_gen === v ? ' selected' : ''}`} onClick={() => setAbout(a => ({ ...a, first_gen: v }))}>{label}</button>
+                ))}
+              </div>
+            </div>
+            <div className="pr-q">
+              <div className="pr-q-label" id="q-pell">Do you receive a Pell Grant?</div>
+              <div className="pr-seg" role="radiogroup" aria-labelledby="q-pell">
+                {([['yes', 'Yes'], ['no', 'No'], ['', 'Not sure']] as [TriState, string][]).map(([v, label]) => (
+                  <button key={label} type="button" role="radio" aria-checked={about.pell_eligible === v} className={`pr-seg-btn${about.pell_eligible === v ? ' selected' : ''}`} onClick={() => setAbout(a => ({ ...a, pell_eligible: v }))}>{label}</button>
+                ))}
+              </div>
+            </div>
+            <div className="pr-q">
+              <label className="pr-q-label" htmlFor="p-state">Home state</label>
+              <select id="p-state" className="ev-input pr-select" value={about.home_state} onChange={e => setAbout(a => ({ ...a, home_state: e.target.value }))}>
+                <option value="">Prefer not to say</option>
+                {US_STATES.map(st => <option key={st.code} value={st.code}>{st.name}</option>)}
+              </select>
+            </div>
+            <div className="pr-q">
+              <label className="pr-q-label" htmlFor="p-greek">Fraternity or sorority</label>
+              <select id="p-greek" className="ev-input pr-select" value={about.greek_org} onChange={e => setAbout(a => ({ ...a, greek_org: e.target.value }))}>
+                <option value="">Prefer not to say</option>
+                <option value="none">Not a member</option>
+                {GREEK_ORGS.map(o => <option key={o} value={o}>{o}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <hr className="ev-divider-dark" />
+
+          <div className="pr-section">
+            <div className="ev-label">Emails</div>
+            <button type="button" className="pr-toggle" role="switch" aria-checked={emailsOn} onClick={() => setEmailsOn(v => !v)}>
+              <div style={{ textAlign: 'left' }}>
+                <div className="pr-toggle-text">Scholarship emails</div>
+                <div className="pr-toggle-sub">New matches (at most one email a day) and reminders before your deadlines.</div>
+              </div>
+              <span className={`pr-switch${emailsOn ? ' on' : ''}`} aria-hidden="true" />
+            </button>
+          </div>
+
+          <hr className="ev-divider-dark" />
+
           <div className="pr-section">
             <div className="ev-label">Resume</div>
             <div className="pr-resume-hint">
@@ -404,6 +501,12 @@ export default function Profile() {
                 <div className="pr-resume-drop-sub">PDF, DOC, or DOCX — up to 8MB</div>
               </label>
             )}
+          </div>
+
+          <div className="pr-legal">
+            <Link to="/privacy">Privacy</Link>
+            <Link to="/terms">Terms</Link>
+            <a href="mailto:support@elevaid.pro">support@elevaid.pro</a>
           </div>
         </div>
 

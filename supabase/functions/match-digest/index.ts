@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { evaluateMatch, type MatchProfile, type MatchRules } from "./matching.ts";
 
 // Daily "new matches" email. Replaces the per-scholarship email that fired on
 // every promotion: each student gets at most ONE email per day, only when at
@@ -23,16 +24,10 @@ async function hmacHex(secret: string, message: string): Promise<string> {
   return Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 40);
 }
 
+// Same engine as the dashboard: a student is emailed about a scholarship they
+// qualify for, or one they may qualify for pending a detail only they know.
 function isMatch(student: Row, rules: Row | null): boolean {
-  if (!rules) return true;
-  const schools = (rules.eligible_schools as string[] | null) ?? [];
-  if (schools.length > 0 && !schools.includes(student.school as string)) return false;
-  if (rules.min_gpa && (student.gpa as number) < (rules.min_gpa as number)) return false;
-  if (rules.graduation_year_min && (student.graduation_year as number) < (rules.graduation_year_min as number)) return false;
-  if (rules.graduation_year_max && (student.graduation_year as number) > (rules.graduation_year_max as number)) return false;
-  const majors = (rules.eligible_majors as string[] | null) ?? [];
-  if (majors.length > 0 && !majors.includes(student.major as string)) return false;
-  return true;
+  return evaluateMatch(student as unknown as MatchProfile, rules as MatchRules | null).verdict !== "ineligible";
 }
 
 function esc(s: unknown): string {
@@ -101,7 +96,7 @@ Deno.serve(async (req) => {
   const rulesBy = new Map(((rulesRows ?? []) as Row[]).map((r) => [r.scholarship_id as string, r]));
 
   const { data: students } = await supabase.from("student_profiles")
-    .select("user_id, first_name, email, school, gpa, major, graduation_year, email_opt_out, last_match_email_at")
+    .select("user_id, first_name, email, school, gpa, major, graduation_year, first_gen, pell_eligible, home_state, greek_org, email_opt_out, last_match_email_at")
     .eq("email_opt_out", false).not("email", "is", null);
 
   const outgoing: { userId: string; email: string; payload: Record<string, unknown>; count: number }[] = [];

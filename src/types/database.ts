@@ -21,6 +21,11 @@ export interface StudentProfile {
   major: string;
   graduation_year: number;
   resume_url: string | null;
+  first_gen?: boolean | null;
+  pell_eligible?: boolean | null;
+  home_state?: string | null;
+  greek_org?: string | null;
+  email_opt_out?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -67,6 +72,12 @@ export interface EligibilityRule {
   graduation_year_min: number | null;
   graduation_year_max: number | null;
   keywords: string[];
+  class_years?: string[];
+  major_fields?: string[];
+  requirements?: string[];
+  eligibility_summary?: string | null;
+  rules_source?: string | null;
+  rules_extracted_at?: string | null;
   created_at: string;
   updated_at: string;
 }

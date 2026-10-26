@@ -1,12 +1,13 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { evaluateMatch, type MatchProfile, type MatchRules } from "./matching.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-pipeline-secret",
 };
 
 // Threshold from the user's own words: "no student should receive <4"
@@ -37,30 +38,28 @@ interface ScholarshipWithRules {
   eligibility_rules: EligibilityRule | EligibilityRule[] | null;
 }
 
-// This is a DELIBERATE, faithful mirror of Dashboard.tsx's calculateMatches
-// — not an idealized eligibility spec. The real student dashboard only
-// hard-excludes a scholarship on eligible_schools and graduation_year;
-// GPA and eligible_majors are checked but never exclude a match, they only
-// lower the displayed match percentage. So this synthetic check counts a
-// scholarship as "matched" under the exact same rule: school + grad year
-// only. If that ever changes in Dashboard.tsx, this predicate must change
-// with it, or the canaries will be monitoring a matching system that no
-// longer exists.
+// Same engine as the dashboard (src/lib/matching.ts, synced copy). A canary
+// "matches" a scholarship when the dashboard would show it to them at all,
+// including ones they need to confirm a detail for.
 function isMatch(profile: SyntheticProfile, rules: EligibilityRule | null): boolean {
-  if (!rules) return false; // no eligibility_rules row -> unmatchable, same as the dashboard
+  return evaluateMatch(profile as unknown as MatchProfile, rules as unknown as MatchRules | null).verdict !== "ineligible";
+}
 
-  const schools = rules.eligible_schools ?? [];
-  const schoolMatch = schools.length === 0 || schools.includes(profile.school);
-  if (!schoolMatch) return false;
-
-  const yearInRange =
-    (!rules.graduation_year_min || profile.graduation_year >= rules.graduation_year_min) &&
-    (!rules.graduation_year_max || profile.graduation_year <= rules.graduation_year_max);
-  if (!yearInRange) return false;
-
-  // GPA and eligible_majors are intentionally NOT checked here — the real
-  // app doesn't exclude on them either (confirmed against Dashboard.tsx).
-  return true;
+// deno-lint-ignore no-explicit-any
+async function isAuthorized(req: Request, supabase: any): Promise<boolean> {
+  const bearer = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "") ?? "";
+  if (bearer && bearer === SUPABASE_SERVICE_KEY) return true;
+  const provided = req.headers.get("x-pipeline-secret") ?? "";
+  if (provided) {
+    const { data: secret } = await supabase.rpc("pipeline_secret");
+    if (typeof secret === "string" && secret.length >= 32 && provided === secret) return true;
+  }
+  if (!bearer) return false;
+  const { data: userData } = await supabase.auth.getUser(bearer);
+  const userId = userData?.user?.id;
+  if (!userId) return false;
+  const { data: role } = await supabase.from("user_roles").select("role").eq("user_id", userId).eq("role", "admin").maybeSingle();
+  return !!role;
 }
 
 serve(async (req: Request) => {
@@ -74,6 +73,15 @@ serve(async (req: Request) => {
   }
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+
+  // Callers: pg_cron (x-pipeline-secret), the service role, or a signed-in
+  // admin from the console. Anyone else is refused.
+  if (!(await isAuthorized(req, supabase))) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
 
   try {
     const [{ data: profiles, error: profilesError }, { data: scholarships, error: scholarshipsError }] =
