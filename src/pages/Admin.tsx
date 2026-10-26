@@ -480,6 +480,7 @@ export default function Admin() {
   ];
 
   const runPipeline = async () => {
+    if (pipelineBusy) return;
     setPipelineBusy(true);
     const { data, error } = await supabase.functions.invoke('admin-run-pipeline', { body: {} });
     setPipelineBusy(false);
@@ -522,7 +523,7 @@ export default function Admin() {
   };
 
   const updateStageClassYears = (id: string, value: string) => {
-    setStagingRows((rows) => rows.map((row) => row.id === id ? { ...row, class_years: value } : row));
+    setStagingRows((rows) => rows.map((row) => row.id === id ? { ...row, allowed_class_years: value } : row));
   };
 
   // Owner "Approve" never publishes directly: it saves the edits and sends
@@ -537,6 +538,9 @@ export default function Admin() {
     }
     const amount = numberValue(row.award_amount);
     const deadline = stringValue(row.deadline).trim();
+    const classNames = ['freshman', 'sophomore', 'junior', 'senior'];
+    const rawYears = Array.isArray(row.allowed_class_years) ? row.allowed_class_years : stringValue(row.allowed_class_years).split(',');
+    const classYears = rawYears.map((y) => String(y).trim().toLowerCase()).filter((y) => classNames.includes(y));
     const { error } = await supabase.from('scholarship_staging').update({
       name,
       title: name,
@@ -545,9 +549,13 @@ export default function Admin() {
       award_amount: amount ? String(amount) : null,
       deadline: deadline || null,
       application_url: url,
+      allowed_class_years: classYears.length ? classYears : null,
       status: 'needs_review',
       audit_passed: null,
       audit_failure: 'OWNER: sent to the gate from the console',
+      // Restart the 14-day hold clock so a row the owner just fixed can't
+      // expire on its first pass through the gate.
+      created_at: new Date().toISOString(),
     }).eq('id', row.id);
     if (error) {
       toast({ variant: 'destructive', title: 'Could not send to the gate', description: error.message });
@@ -757,7 +765,7 @@ export default function Admin() {
           {activeView === 'review' && <>
             <div className="console-eyebrow">Scholarship intake</div><h2 className="console-title">Review queue</h2><p className="console-subtitle">Review incoming scholarships before publishing to the live inventory.</p>
             {stagingUnavailable ? <div className="console-alert" style={{ marginTop: 18 }}><AlertTriangle size={15} />Staging data is unavailable. Confirm the table is exposed and has an admin-session RLS policy.</div> : <>
-              <div className="console-tools" style={{ margin: '18px 0 10px' }}><button className="console-button" disabled={!selectedStage.size} onClick={() => void bulkStageAction('approve')}><Check size={14} />Send selected to gate</button><button className="console-button danger" disabled={!selectedStage.size} onClick={() => void bulkStageAction('reject')}><X size={14} />Reject selected</button><span className="console-muted" style={{ fontSize: 12 }}>{selectedStage.size} selected</span></div>
+              <div className="console-tools" style={{ margin: '18px 0 10px' }}><button className="console-button" disabled={!selectedStage.size || pipelineBusy} onClick={() => void bulkStageAction('approve')}><Check size={14} />Send selected to gate</button><button className="console-button danger" disabled={!selectedStage.size} onClick={() => void bulkStageAction('reject')}><X size={14} />Reject selected</button><span className="console-muted" style={{ fontSize: 12 }}>{selectedStage.size} selected</span></div>
               <div className="console-panel console-table-wrap"><table className="console-table"><thead><tr><th><input aria-label="Select all" type="checkbox" checked={activeStages.length > 0 && activeStages.every((row) => selectedStage.has(row.id))} onChange={(event) => setSelectedStage(event.target.checked ? new Set(activeStages.map((row) => row.id)) : new Set())} /></th><th>Scholarship</th><th>Amount</th><th>Deadline</th><th>Class years</th><th>Status</th><th>Source</th><th>Actions</th></tr></thead><tbody>
                 {activeStages.sort((left, right) => stringValue(left.deadline, '9999-12-31').localeCompare(stringValue(right.deadline, '9999-12-31'))).map((row) => {
                   const closing = row.deadline && new Date(row.deadline) >= now && new Date(row.deadline) <= twoWeeks;
@@ -765,8 +773,8 @@ export default function Admin() {
                     <td><button style={{ border: 0, padding: 0, background: 'none', color: '#16324a', fontWeight: 700, cursor: 'pointer', textAlign: 'left' }} onClick={() => setExpandedStage(expandedStage === row.id ? null : row.id)}>{row.name || 'Untitled'} <ChevronDown size={12} /></button>{expandedStage === row.id && <div style={{ marginTop: 10, minWidth: 240, maxWidth: 420, color: '#667584', fontSize: 11 }}><p><strong>Raw eligibility:</strong> {stringValue(row.eligibility_raw, 'Not provided')}</p><p><strong>Application:</strong> <a href={stringValue(row.application_url, '#')} target="_blank" rel="noreferrer">{stringValue(row.application_url, 'No URL')}</a></p><p><strong>Audit criteria:</strong> {typeof row.audit_criteria === 'string' ? row.audit_criteria : JSON.stringify(row.audit_criteria ?? 'Not provided')}</p></div>}</td>
                     <td><input className="console-field" type="number" min="0" value={stringValue(String(row.award_amount ?? ''))} onChange={(event) => updateStageValue(row.id, 'award_amount', event.target.value)} /></td>
                     <td><input className="console-field" type="date" value={stringValue(row.deadline)} onChange={(event) => updateStageValue(row.id, 'deadline', event.target.value)} />{closing && <div style={{ marginTop: 5 }}><span className="console-status warn">Closing soon</span></div>}</td>
-                    <td><input className="console-field" aria-label="Eligible class years, comma separated" placeholder="2027, 2028" value={Array.isArray(row.class_years) ? row.class_years.join(', ') : stringValue(row.class_years)} onChange={(event) => updateStageClassYears(row.id, event.target.value)} /></td>
-                    <td>{stageStatusBadge(stringValue(row.status, 'needs_review'))}</td><td>{stringValue(row.source, 'Unknown')}</td><td><div className="console-tools"><button className="console-button primary" title="Re-runs the pre-publish gate on this row; it goes live only if every check passes" onClick={() => void publishStage(row)}>Send to gate</button><button className="console-button danger" onClick={() => { const reason = window.prompt('Reason for rejection:'); if (reason) void rejectStage(row, reason); }}>Reject</button></div></td></tr>;
+                    <td><input className="console-field" aria-label="Eligible class years, comma separated" placeholder="junior, senior" value={Array.isArray(row.allowed_class_years) ? row.allowed_class_years.join(', ') : stringValue(row.allowed_class_years)} onChange={(event) => updateStageClassYears(row.id, event.target.value)} /></td>
+                    <td>{stageStatusBadge(stringValue(row.status, 'needs_review'))}</td><td>{stringValue(row.source, 'Unknown')}</td><td><div className="console-tools"><button className="console-button primary" disabled={pipelineBusy} title="Re-runs the pre-publish gate on this row; it goes live only if every check passes" onClick={() => void publishStage(row)}>Send to gate</button><button className="console-button danger" onClick={() => { const reason = window.prompt('Reason for rejection:'); if (reason) void rejectStage(row, reason); }}>Reject</button></div></td></tr>;
                 })}
               </tbody></table>{!activeStages.length && <div className="console-empty">The review queue is clear.</div>}</div>
             </>}

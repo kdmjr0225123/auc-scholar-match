@@ -9,6 +9,16 @@ import posthog from 'posthog-js';
 
 let initialized = false;
 
+// Password-reset and sign-in links carry tokens in the URL hash
+// (#access_token=…&refresh_token=…). Never let a URL with a hash or auth
+// query params leave the browser.
+export function scrubUrl(value: unknown): unknown {
+  if (typeof value !== 'string') return value;
+  const noHash = value.split('#')[0];
+  return noHash.replace(/([?&])(access_token|refresh_token|token|code|token_hash)=[^&]*/gi, '$1$2=redacted');
+}
+const URL_PROPS = ['$current_url', '$referrer', '$initial_current_url', '$initial_referrer', '$pathname'];
+
 export function initAnalytics(): void {
   const key = import.meta.env.VITE_POSTHOG_KEY as string | undefined;
   if (!key || initialized || typeof window === 'undefined') return;
@@ -26,6 +36,14 @@ export function initAnalytics(): void {
     capture_heatmaps: false,
     disable_session_recording: true,
     disable_surveys: true,
+    before_send: (event) => {
+      if (event?.properties) {
+        for (const k of URL_PROPS) if (k in event.properties) event.properties[k] = scrubUrl(event.properties[k]);
+      }
+      if (event?.$set) for (const k of URL_PROPS) if (k in event.$set) event.$set[k] = scrubUrl(event.$set[k]);
+      if (event?.$set_once) for (const k of URL_PROPS) if (k in event.$set_once) event.$set_once[k] = scrubUrl(event.$set_once[k]);
+      return event;
+    },
   });
   initialized = true;
 }

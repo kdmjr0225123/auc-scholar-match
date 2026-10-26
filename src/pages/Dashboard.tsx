@@ -7,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import '@/styles/elevaid.css';
 import { GraduationCap, Calendar, ExternalLink, ChevronRight, Star, User, Check, Undo2, Loader2, CheckCircle2, Download, Sparkles } from 'lucide-react';
 import { getSchoolTheme } from '@/lib/schoolTheme';
-import { evaluateMatch, matchLabel, matchRank, type MatchResult } from '@/lib/matching';
+import { evaluateMatch, matchLabel, matchRank, answerableChecks, type MatchResult } from '@/lib/matching';
 import { track } from '@/lib/analytics';
 
 interface MatchedScholarship extends Scholarship {
@@ -72,9 +72,10 @@ export default function Dashboard() {
   // Applied scholarships are tracked but shouldn't clutter the "still deciding"
   // list — they live in their own Applied section instead.
   const openMatches = matched.filter(m => !appliedIds.has(m.id));
-  const totalAvailable = openMatches.reduce((s, m) => s + (m.award_amount || 0), 0);
+  // Headline total counts only awards the student is confirmed eligible for.
+  const totalAvailable = openMatches.filter(m => m.match.verdict === 'eligible').reduce((s, m) => s + (Number(m.award_amount) || 0), 0);
   const strongMatches = openMatches.filter(m => isStrong(m.match)).length;
-  const needsDetails = openMatches.filter(m => m.match.verdict === 'check').length;
+  const needsDetails = openMatches.filter(m => answerableChecks(m.match) > 0).length;
   const profileIncomplete = !!profile && (profile.first_gen == null || profile.pell_eligible == null || !profile.home_state);
   const animatedTotal = useCounter(totalAvailable, 1600, revealed);
 
@@ -475,7 +476,7 @@ export default function Dashboard() {
               <div className="dash-resume-cta-icon"><Check size={18} /></div>
               <div className="dash-resume-cta-text">
                 <div className="dash-resume-cta-title">Confirm {needsDetails} more match{needsDetails === 1 ? '' : 'es'}</div>
-                <div className="dash-resume-cta-sub">Answer 3 optional questions (first-gen, Pell Grant, home state) so we can tell you exactly what you qualify for.</div>
+                <div className="dash-resume-cta-sub">A few optional questions (first-gen, Pell Grant, home state) tell us exactly what you qualify for.</div>
               </div>
               <ChevronRight size={16} className="dash-resume-cta-arrow" />
             </Link>

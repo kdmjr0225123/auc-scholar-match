@@ -1,7 +1,7 @@
 // Tests for src/lib/matching.ts. Run: npm run test:matching
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { evaluateMatch, classYear, majorField, matchLabel, matchRank } from '../src/lib/matching.ts';
+import { evaluateMatch, classYear, majorFields, matchLabel, matchRank, classYearsToGradRange } from '../src/lib/matching.ts';
 
 const NOW = new Date('2026-10-26T12:00:00Z');
 const base = { school: 'spelman', major: 'Computer Science', gpa: 3.4, graduation_year: 2028 };
@@ -13,23 +13,31 @@ t('class year boundaries (academic year ends in May)', () => {
   assert.equal(classYear(2028, NOW), 'junior');
   assert.equal(classYear(2029, NOW), 'sophomore');
   assert.equal(classYear(2030, NOW), 'freshman');
-  assert.equal(classYear(2026, NOW), null);
+  assert.equal(classYear(2025, NOW), null);
   assert.equal(classYear(2027, new Date('2027-06-15T00:00:00Z')), 'senior');
-  assert.equal(classYear(2027, new Date('2027-07-01T00:00:00Z')), null);
+  assert.equal(classYear(2027, new Date('2028-01-15T00:00:00Z')), null);
 });
 
-t('major fields', () => {
-  assert.equal(majorField('Computer Science'), 'stem');
-  assert.equal(majorField('Pre-Med'), 'health');
-  assert.equal(majorField('Business Administration'), 'business');
-  assert.equal(majorField('Economics'), 'business');
-  assert.equal(majorField('Psychology'), 'social_science');
-  assert.equal(majorField('Mass Media Arts'), 'arts_media');
-  assert.equal(majorField('Elementary Education'), 'education');
-  assert.equal(majorField('English'), 'humanities');
-  assert.equal(majorField('eniginer'), 'stem');
-  assert.equal(majorField('Other'), null);
-  assert.equal(majorField(null), null);
+t('major fields (multi-field, no false positives)', () => {
+  const has = (m: string, f: string) => assert.ok(majorFields(m).includes(f as never), `${m} should include ${f}: ${majorFields(m)}`);
+  const not = (m: string, f: string) => assert.ok(!majorFields(m).includes(f as never), `${m} should not include ${f}: ${majorFields(m)}`);
+  has('Computer Science', 'stem');
+  has('Pre-Med', 'health'); has('Pre-Medicine', 'health');
+  has('Biology', 'stem'); has('Biology', 'health'); has('Chemistry', 'health');
+  has('Nursing', 'health'); has('Public Health', 'health'); has('Kinesiology', 'health'); has('Kinesiology', 'stem');
+  has('Health Sciences', 'health'); has('Health Sciences', 'stem');
+  has('Psychology', 'social_science'); has('Psychology', 'stem');
+  has('Economics', 'business'); has('Economics', 'social_science');
+  has('Political Science', 'social_science'); not('Political Science', 'stem');
+  has('Social Science', 'social_science'); not('Social Science', 'stem');
+  has('Liberal Arts', 'humanities'); not('Liberal Arts', 'arts_media');
+  has('Mass Media Arts', 'arts_media'); has('Communications', 'arts_media');
+  not('Artificial Intelligence', 'arts_media'); has('Artificial Intelligence', 'stem');
+  not('Information Technology Department', 'arts_media');
+  has('Elementary Education', 'education'); has('English', 'humanities');
+  has('International Business', 'business'); has('International Relations', 'social_science');
+  has('eniginer', 'stem'); has('Mechanical Engineering', 'stem');
+  assert.deepEqual(majorFields('Other'), []); assert.deepEqual(majorFields('Undeclared'), []); assert.deepEqual(majorFields(null), []);
 });
 
 t('no rules row = open to everyone, not targeted', () => {
@@ -59,6 +67,18 @@ t('class years', () => {
   assert.equal(evaluateMatch(base, { class_years: ['junior', 'senior'] }, NOW).verdict, 'eligible');
   assert.equal(evaluateMatch(base, { class_years: ['senior'] }, NOW).verdict, 'ineligible');
   assert.equal(evaluateMatch({ ...base, graduation_year: null }, { class_years: ['senior'] }, NOW).verdict, 'check');
+  assert.equal(classYear(2026, NOW), 'senior', 'December graduate is still a senior in the fall');
+});
+
+t('class years convert to absolute graduation years (no July drift)', () => {
+  const r = classYearsToGradRange(['junior'], new Date('2027-04-10T00:00:00Z'));
+  assert.deepEqual(r, { min: 2028, max: 2028 });
+  const rules = { graduation_year_min: r!.min, graduation_year_max: r!.max };
+  const student = { ...base, graduation_year: 2028 };
+  assert.equal(evaluateMatch(student, rules, new Date('2027-04-15T00:00:00Z')).verdict, 'eligible');
+  assert.equal(evaluateMatch(student, rules, new Date('2027-08-15T00:00:00Z')).verdict, 'eligible', 'same student still matches after July');
+  assert.deepEqual(classYearsToGradRange(['freshman', 'senior'], NOW), { min: 2027, max: 2030 });
+  assert.equal(classYearsToGradRange([], NOW), null);
 });
 
 t('graduation-year range', () => {
@@ -72,13 +92,29 @@ t('GPA: below min excludes, missing GPA is a check, equal passes', () => {
   assert.equal(evaluateMatch({ ...base, gpa: null }, { min_gpa: 3.0 }, NOW).verdict, 'check');
 });
 
-t('majors: exact, field, unknown major, wrong field', () => {
-  assert.equal(evaluateMatch(base, { eligible_majors: ['computer science'] }, NOW).verdict, 'eligible');
+t('majors never hide a scholarship; they are a reason or a check', () => {
+  assert.equal(evaluateMatch(base, { eligible_majors: ['computer science '] }, NOW).verdict, 'eligible');
+  assert.equal(evaluateMatch({ ...base, major: 'Computer Science ' }, { eligible_majors: ['Computer Science'] }, NOW).verdict, 'eligible');
   assert.equal(evaluateMatch(base, { major_fields: ['stem'] }, NOW).verdict, 'eligible');
+  assert.equal(evaluateMatch({ ...base, major: 'Mechanical Engineering' }, { eligible_majors: ['Engineering'] }, NOW).verdict, 'eligible');
+  assert.equal(evaluateMatch({ ...base, major: 'Pre-Medicine' }, { eligible_majors: ['Pre-Med'] }, NOW).verdict, 'eligible');
+  assert.equal(evaluateMatch({ ...base, major: 'Biology' }, { major_fields: ['health'] }, NOW).verdict, 'eligible');
+  assert.equal(evaluateMatch({ ...base, major: 'Political Science' }, { major_fields: ['social_science'] }, NOW).verdict, 'eligible');
+  assert.equal(evaluateMatch({ ...base, major: 'Psychology' }, { major_fields: ['stem'] }, NOW).verdict, 'eligible');
   assert.equal(evaluateMatch({ ...base, major: 'Other' }, { major_fields: ['stem'] }, NOW).verdict, 'check');
-  const miss = evaluateMatch({ ...base, major: 'English' }, { major_fields: ['stem', 'health'] }, NOW);
-  assert.equal(miss.verdict, 'ineligible');
-  assert.deepEqual(miss.misses, ['Only for STEM, health majors']);
+  const far = evaluateMatch({ ...base, major: 'English' }, { major_fields: ['stem', 'health'] }, NOW);
+  assert.equal(far.verdict, 'check');
+  assert.deepEqual(far.misses, []);
+});
+
+t('GPA display does not round the minimum', () => {
+  const m = evaluateMatch({ ...base, gpa: 3.27 }, { min_gpa: 3.25 }, NOW);
+  assert.deepEqual(m.reasons, ['Your 3.27 GPA meets the 3.25 minimum']);
+});
+
+t('Greek membership is confirmed, not assumed', () => {
+  assert.equal(evaluateMatch({ ...base, greek_org: 'Delta Sigma Theta' }, { requirements: ['greek_member'] }, NOW).verdict, 'check');
+  assert.equal(evaluateMatch({ ...base, greek_org: 'none' }, { requirements: ['greek_member'] }, NOW).verdict, 'ineligible');
 });
 
 t('first-gen / Pell: unknown is a check, never an exclusion', () => {

@@ -95,21 +95,34 @@ const FIELD_NAMES: Record<MajorField, string> = {
   education: 'education',
 };
 
+// A major can belong to several fields (Biology is STEM and pre-health;
+// Economics is business and social science). Patterns are matched on word
+// starts, so "art" does not match "Department" and "science" alone never
+// decides a field.
 const FIELD_PATTERNS: [MajorField, RegExp][] = [
-  ['health', /\b(pre-?med|medicine|nursing|public health|health|kinesiology|nutrition|pharm|dent|biomedical)\w*/i],
-  ['stem', /\b(computer|comput|software|data|cyber|information tech|math|physics|chemi|biolog|engineer|enginee|eniginer|environmental science|statistic|neuro|astro|geolog|science)\w*/i],
-  ['business', /\b(business|account|financ|marketing|management|entrepreneur|economic|supply chain|real estate|hospitality)\w*/i],
-  ['education', /\b(education|teaching)\w*/i],
-  ['arts_media', /\b(art|music|theat|film|communication|journalism|media|public relations|design|dance)\w*/i],
-  ['social_science', /\b(psycholog|sociolog|political|criminal|social work|anthropolog|international relations|urban|government|public policy)\w*/i],
-  ['humanities', /\b(english|history|philosoph|religio|african american|women'?s studies|spanish|french|language|literature|liberal arts)\w*/i],
+  ['stem', /\b(computer|computing|software|data|cyber|information (tech|sys)|math|statistic|physics|chemi|biolog|biochem|neuro|engineer|eniginer|environmental science|astro|geolog|artificial intelligence|kinesiology|exercise science|health science|psycholog)/i],
+  ['health', /\b(pre-?med|medicine|medical|nursing|public health|health|kinesiology|exercise science|nutrition|pharm|dent|biomedical|biolog|biochem|chemi|neuro|psycholog)/i],
+  ['business', /\b(business|account|financ|marketing|management|entrepreneur|economic|supply chain|real estate|hospitality|actuar)/i],
+  ['social_science', /\b(psycholog|sociolog|political|criminal|social (work|science)|anthropolog|international relations|urban|government|public policy|economic)/i],
+  ['humanities', /\b(english|history|philosoph|religio|african american|africana|women'?s studies|gender studies|spanish|french|language|literature|liberal arts|interdisciplinary)/i],
+  ['arts_media', /\b(arts?\b|music|theat|film|cinema|communication|journalism|mass media|media\b|public relations|graphic design|design|dance|photograph)/i],
+  ['education', /\b(education|teaching)/i],
 ];
 
-/** Best-effort field for a free-text major. Null when unknown ("Other", "Undeclared"). */
+/** Fields a free-text major belongs to. Empty when unknown ("Other", "Undeclared"). */
+export function majorFields(major: string | null | undefined): MajorField[] {
+  const m = (major ?? '').trim();
+  if (!m) return [];
+  const out: MajorField[] = [];
+  for (const [field, re] of FIELD_PATTERNS) if (re.test(m) && !out.includes(field)) out.push(field);
+  // "Liberal Arts" is humanities, not arts and media.
+  if (/\bliberal arts\b/i.test(m)) return out.filter((f) => f !== 'arts_media');
+  return out;
+}
+
+/** First field of a major (kept for callers that want one label). */
 export function majorField(major: string | null | undefined): MajorField | null {
-  if (!major) return null;
-  for (const [field, re] of FIELD_PATTERNS) if (re.test(major)) return field;
-  return null;
+  return majorFields(major)[0] ?? null;
 }
 
 /**
@@ -120,6 +133,8 @@ export function classYear(graduationYear: number | null | undefined, now: Date =
   if (!graduationYear) return null;
   const endYear = now.getUTCMonth() >= 6 ? now.getUTCFullYear() + 1 : now.getUTCFullYear();
   const remaining = graduationYear - endYear;
+  // December graduates: Class of 2026 in fall 2026 is still a senior.
+  if (remaining === -1 && now.getUTCMonth() >= 6) return 'senior';
   if (remaining < 0) return null;
   if (remaining === 0) return 'senior';
   if (remaining === 1) return 'junior';
@@ -134,6 +149,22 @@ const num = (v: unknown): number | null => {
 };
 
 const list = (v: string[] | null | undefined): string[] => (Array.isArray(v) ? v.filter(Boolean) : []);
+
+/** GPA threshold for display without rounding a 3.25 minimum up to 3.3. */
+const fmtGpa = (g: number): string => (Math.round(g * 100) % 10 === 0 ? g.toFixed(1) : g.toFixed(2));
+
+/**
+ * Class years ("rising juniors" etc.) are relative to the school year they were
+ * read in. Convert them to absolute graduation years so a rule written in
+ * April 2027 still targets the same students in September 2027.
+ */
+export function classYearsToGradRange(years: string[], readAt: Date): { min: number; max: number } | null {
+  const offset: Record<string, number> = { senior: 0, junior: 1, sophomore: 2, freshman: 3 };
+  const endYear = readAt.getUTCMonth() >= 6 ? readAt.getUTCFullYear() + 1 : readAt.getUTCFullYear();
+  const grads = years.filter((y) => y in offset).map((y) => endYear + offset[y]);
+  if (grads.length === 0) return null;
+  return { min: Math.min(...grads), max: Math.max(...grads) };
+}
 
 /**
  * Evaluate one student against one scholarship's rules. `rules` may be null
@@ -185,34 +216,35 @@ export function evaluateMatch(profile: MatchProfile, rules: MatchRules | null, n
   const maxGpa = num(r.max_gpa);
   const gpa = num(profile.gpa);
   if (minGpa !== null) {
-    if (gpa === null) checks.push(`Requires a ${minGpa.toFixed(1)} GPA — add yours to your profile`);
-    else if (gpa + 1e-9 < minGpa) misses.push(`Requires a ${minGpa.toFixed(1)} GPA (yours: ${gpa.toFixed(2)})`);
+    if (gpa === null) checks.push(`Requires a ${fmtGpa(minGpa)} GPA — add yours to your profile`);
+    else if (gpa + 1e-9 < minGpa) misses.push(`Requires a ${fmtGpa(minGpa)} GPA (yours: ${fmtGpa(gpa)})`);
     else {
-      reasons.push(`Your ${gpa.toFixed(2)} GPA meets the ${minGpa.toFixed(1)} minimum`);
+      reasons.push(`Your ${fmtGpa(gpa)} GPA meets the ${fmtGpa(minGpa)} minimum`);
       targeted = true;
     }
   }
-  if (maxGpa !== null && gpa !== null && gpa - 1e-9 > maxGpa) misses.push(`Only for GPAs up to ${maxGpa.toFixed(1)}`);
+  if (maxGpa !== null && gpa !== null && gpa - 1e-9 > maxGpa) misses.push(`Only for GPAs up to ${fmtGpa(maxGpa)}`);
 
-  // Major: exact majors first, then broad fields
-  const majors = list(r.eligible_majors);
+  // Major. Which field a major falls in is our inference, not a stored fact,
+  // so a major restriction never hides a scholarship: it is a reason when the
+  // major clearly fits and a check otherwise.
+  const majors = list(r.eligible_majors).map((m) => m.trim()).filter(Boolean);
   const fields = list(r.major_fields);
   if (majors.length > 0 || fields.length > 0) {
-    const field = majorField(profile.major);
-    const exact = majors.some((m) => m.toLowerCase() === (profile.major ?? '').toLowerCase());
-    const inField = field !== null && fields.includes(field);
+    const mine = (profile.major ?? '').trim();
+    const myFields = majorFields(mine);
+    const listedFields = majors.flatMap((m) => majorFields(m));
+    const exact = mine !== '' && majors.some((m) => m.toLowerCase() === mine.toLowerCase());
+    const fitField = myFields.find((f) => fields.includes(f) || listedFields.includes(f));
+    const wanted = [...majors, ...fields.map((f) => FIELD_NAMES[f as MajorField] ?? f)];
     if (exact) {
-      reasons.push(`Open to ${profile.major} majors`);
+      reasons.push(`Open to ${mine} majors`);
       targeted = true;
-    } else if (inField) {
-      reasons.push(`Open to ${FIELD_NAMES[field as MajorField]} majors like ${profile.major}`);
+    } else if (fitField) {
+      reasons.push(`Open to ${FIELD_NAMES[fitField]} majors like ${mine}`);
       targeted = true;
-    } else if (!profile.major || field === null) {
-      const wanted = [...majors, ...fields.map((f) => FIELD_NAMES[f as MajorField] ?? f)];
-      checks.push(`For ${wanted.join(', ')} majors — confirm your major qualifies`);
     } else {
-      const wanted = [...majors, ...fields.map((f) => FIELD_NAMES[f as MajorField] ?? f)];
-      misses.push(`Only for ${wanted.join(', ')} majors`);
+      checks.push(`For ${wanted.join(', ')} majors — confirm your major qualifies`);
     }
   }
 
@@ -237,9 +269,10 @@ export function evaluateMatch(profile: MatchProfile, rules: MatchRules | null, n
         break;
       }
       case 'greek_member':
-        if (profile.greek_org && profile.greek_org !== 'none') { reasons.push('For members of your Greek organization — confirm yours qualifies'); targeted = true; }
-        else if (profile.greek_org === 'none') misses.push('Only for members of a specific Greek organization');
-        else checks.push('For members of a specific Greek organization');
+        // We store which organization a student is in, not which one an award
+        // requires, so membership is always something to confirm.
+        if (profile.greek_org === 'none') misses.push('Only for members of a specific fraternity or sorority');
+        else checks.push('For members of a specific fraternity or sorority — confirm yours qualifies');
         break;
       case 'women':
         if (profile.school === 'spelman') reasons.push('For women');
@@ -271,6 +304,11 @@ export function matchRank(m: MatchResult): number {
   if (m.verdict === 'eligible') return m.targeted ? 0 : 1;
   if (m.verdict === 'check') return 2;
   return 3;
+}
+
+/** Checks a student can resolve by answering the optional profile questions. */
+export function answerableChecks(m: MatchResult): number {
+  return m.checks.filter((c) => /add this to your profile|add your home state/.test(c)).length;
 }
 
 /** Short label for a card badge. */
