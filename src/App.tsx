@@ -13,6 +13,9 @@ import Profile from "./pages/Profile";
 import Dashboard from "./pages/Dashboard";
 import ResumeReview from "./pages/ResumeReview";
 import Admin from "./pages/Admin";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -35,6 +38,11 @@ const App = () => (
             <Routes>
               <Route path="/" element={<LandingRoute />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/terms" element={<Terms />} />
+              {/* Public on purpose: a recovery session must reach this form
+                  before ProtectedRoute/owner redirects can move it. */}
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/profile-setup" element={
                 <ProtectedRoute>
                   <ProfileSetup />

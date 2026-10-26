@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import '@/styles/elevaid.css';
-import { GraduationCap, User, ClipboardList, Star, ArrowRight } from 'lucide-react';
+import { GraduationCap, User, ClipboardList, Star, ArrowRight, AlertCircle, MailCheck } from 'lucide-react';
+import LegalFooter from '@/components/LegalFooter';
+import { track } from '@/lib/analytics';
 
 type Mode = 'signup' | 'signin';
 
@@ -33,6 +35,9 @@ export default function Auth() {
   const [mode, setMode] = useState<Mode>(searchParams.get('mode') === 'signin' ? 'signin' : 'signup');
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', password: '' });
+  const [forgot, setForgot] = useState<{ open: boolean; email: string; loading: boolean; sent: boolean; error: string | null }>(
+    { open: false, email: '', loading: false, sent: false, error: null },
+  );
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -63,6 +68,40 @@ export default function Auth() {
     checkSession();
   }, [navigate]);
 
+  const switchMode = () => {
+    setMode(m => m === 'signup' ? 'signin' : 'signup');
+    setForgot(f => ({ ...f, open: false, sent: false, error: null }));
+  };
+
+  const openForgot = () =>
+    setForgot({ open: true, email: form.email, loading: false, sent: false, error: null });
+
+  const handleForgot = async () => {
+    const email = forgot.email.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setForgot(f => ({ ...f, error: 'Enter the email you signed up with.' }));
+      return;
+    }
+    setForgot(f => ({ ...f, loading: true, error: null }));
+    track('password_reset_requested');
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      // Same confirmation whether or not the account exists. Only surface
+      // failures that say nothing about the account: rate limits and the
+      // request never reaching Supabase.
+      if (error && error.status === 429) {
+        setForgot(f => ({ ...f, loading: false, error: 'Too many reset requests. Wait a minute and try again.' }));
+        return;
+      }
+      if (error && !error.status) throw error;
+      setForgot(f => ({ ...f, loading: false, sent: true }));
+    } catch {
+      setForgot(f => ({ ...f, loading: false, error: "We couldn't reach the server. Check your connection and try again." }));
+    }
+  };
+
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm(f => ({ ...f, [k]: e.target.value }));
 
@@ -80,13 +119,17 @@ export default function Auth() {
           options: { data: { first_name: form.firstName, last_name: form.lastName } }
         });
         if (error) throw error;
-        if (data.user) navigate('/profile-setup');
+        if (data.user) {
+          track('signup_completed');
+          navigate('/profile-setup');
+        }
       } else {
         const { data, error } = await supabase.auth.signInWithPassword({
           email: form.email,
           password: form.password,
         });
         if (error) throw error;
+        track('login');
         const ownerEmail = import.meta.env.VITE_OWNER_EMAIL?.toLowerCase();
         if (ownerEmail && data.user.email?.toLowerCase() === ownerEmail) {
           const { data: role } = await supabase
@@ -116,8 +159,9 @@ export default function Auth() {
   return (
     <>
       <style>{`
+        .auth-shell { display: flex; flex-direction: column; }
         .auth-bg {
-          min-height: 100vh; min-height: 100dvh;
+          flex: 1;
           display: flex; align-items: center; justify-content: center;
           padding: 2rem; position: relative; overflow: hidden;
         }
@@ -152,22 +196,73 @@ export default function Auth() {
         .auth-switch { text-align: center; font-size: 0.75rem; color: var(--ev-text-faint); margin-top: 1.25rem; }
         .auth-switch button { color: var(--ev-gold); cursor: pointer; font-weight: 600; background: none; border: none; font-family: var(--ev-font-body); font-size: 0.75rem; }
         .auth-switch button:hover { text-decoration: underline; }
+        .auth-forgot-row { display: flex; justify-content: flex-end; margin-top: 0.55rem; }
+        .auth-link-btn { color: var(--ev-gold); cursor: pointer; font-weight: 600; background: none; border: none; padding: 0; font-family: var(--ev-font-body); font-size: 0.75rem; }
+        .auth-link-btn:hover { text-decoration: underline; }
+        .auth-legal { text-align: center; font-size: 0.72rem; line-height: 1.5; color: rgba(255,255,255,0.72); margin-top: 0.75rem; }
+        .auth-legal a { color: rgba(255,255,255,0.9); text-decoration: underline; text-underline-offset: 2px; }
+        .auth-legal a:hover { color: var(--ev-gold); }
+        .auth-note {
+          display: flex; gap: 0.55rem; align-items: flex-start; font-size: 0.82rem; line-height: 1.55;
+          border-radius: 10px; padding: 0.75rem 0.85rem; margin-top: 0.9rem;
+        }
+        .auth-note svg { flex-shrink: 0; margin-top: 2px; }
+        .auth-note-ok { color: rgba(255,255,255,0.88); background: var(--ev-gold-soft); border: 1px solid var(--ev-gold-border); }
+        .auth-note-ok svg { color: var(--ev-gold); }
+        .auth-note-err { color: #F3B4A6; background: var(--ev-danger-soft); border: 1px solid rgba(229,100,75,0.3); }
       `}</style>
 
-      <div className="ev-reset ev-shell-dark auth-bg">
+      <div className="ev-reset ev-shell-dark auth-shell">
+      <div className="auth-bg">
         <div className="ev-card-dark auth-card">
           <div className="auth-top">
             <a className="ev-logo" href="/" style={{ color: '#fff' }}>
               <span className="ev-logo-mark"><GraduationCap size={15} strokeWidth={2.25} /></span>
               <span><em className="ev-logo-em">Elev</em>aid</span>
             </a>
-            <button className="ev-btn ev-btn-ghost-dark" style={{ padding: '0.4rem 0.85rem', fontSize: '0.78rem' }} onClick={() => setMode(m => m === 'signup' ? 'signin' : 'signup')}>
+            <button className="ev-btn ev-btn-ghost-dark" style={{ padding: '0.4rem 0.85rem', fontSize: '0.78rem' }} onClick={switchMode}>
               {mode === 'signup' ? 'Log in' : 'Sign up'}
             </button>
           </div>
 
           {mode === 'signup' && <ProgressDots />}
 
+          {mode === 'signin' && forgot.open ? (
+            <>
+              <div className="auth-h">Reset your password.</div>
+              <div className="auth-sub">Enter your account email and we'll send you a link to choose a new password.</div>
+              <form onSubmit={e => { e.preventDefault(); void handleForgot(); }} noValidate>
+                <div className="ev-field">
+                  <label className="sr-only" htmlFor="forgot-email">Email address</label>
+                  <input
+                    id="forgot-email" className="ev-input" type="email" placeholder="Email address"
+                    value={forgot.email} onChange={e => setForgot(f => ({ ...f, email: e.target.value, error: null }))}
+                    autoComplete="email" disabled={forgot.loading} autoFocus
+                  />
+                </div>
+                {forgot.sent && (
+                  <div className="auth-note auth-note-ok" role="status">
+                    <MailCheck size={15} />
+                    <span>If an account exists for that email, a reset link is on its way. Check your inbox and spam folder.</span>
+                  </div>
+                )}
+                {forgot.error && (
+                  <div className="auth-note auth-note-err" role="alert">
+                    <AlertCircle size={15} />
+                    <span>{forgot.error}</span>
+                  </div>
+                )}
+                <button type="submit" className="ev-btn ev-btn-primary ev-btn-block" disabled={forgot.loading} style={{ marginTop: '1.1rem', padding: '0.9rem' }}>
+                  {forgot.loading ? 'Sending…' : forgot.sent ? 'Send again' : <>Send reset link <ArrowRight size={15} /></>}
+                </button>
+              </form>
+              <div className="auth-switch">
+                Remembered it?{' '}
+                <button onClick={() => setForgot(f => ({ ...f, open: false, sent: false, error: null }))}>Back to sign in</button>
+              </div>
+            </>
+          ) : (
+          <>
           <div className="auth-h">{mode === 'signup' ? "Let's get started." : 'Welcome back.'}</div>
           <div className="auth-sub">{mode === 'signup' ? 'Create your account to unlock your matches.' : 'Sign in to see your scholarship matches.'}</div>
 
@@ -192,19 +287,33 @@ export default function Auth() {
               <label className="sr-only" htmlFor="password">Password</label>
               <input id="password" className="ev-input" type="password" placeholder="Password" value={form.password} onChange={set('password')} autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} />
             </div>
+            {mode === 'signin' && (
+              <div className="auth-forgot-row">
+                <button type="button" className="auth-link-btn" onClick={openForgot}>Forgot password?</button>
+              </div>
+            )}
 
             <button type="submit" className="ev-btn ev-btn-primary ev-btn-block" disabled={loading} style={{ marginTop: '1.1rem', padding: '0.9rem' }}>
               {loading ? 'Loading…' : mode === 'signup' ? <>Continue <ArrowRight size={15} /></> : <>Sign In <ArrowRight size={15} /></>}
             </button>
+            {mode === 'signup' && (
+              <div className="auth-legal">
+                By creating an account you agree to the <Link to="/terms">Terms</Link> and <Link to="/privacy">Privacy Policy</Link>.
+              </div>
+            )}
           </form>
 
           <div className="auth-switch">
             {mode === 'signup' ? 'Already have an account? ' : "Don't have an account? "}
-            <button onClick={() => setMode(m => m === 'signup' ? 'signin' : 'signup')}>
+            <button onClick={switchMode}>
               {mode === 'signup' ? 'Sign in' : 'Sign up'}
             </button>
           </div>
+          </>
+          )}
         </div>
+      </div>
+      <LegalFooter />
       </div>
     </>
   );

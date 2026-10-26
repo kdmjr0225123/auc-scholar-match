@@ -2,6 +2,7 @@
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { AppRole } from '@/types/database';
+import { identify, resetAnalytics } from '@/lib/analytics';
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -13,6 +14,13 @@ interface AuthContextType {
   signOut: () => Promise<void>;
 }
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+// Supabase falls back to the Site URL when a reset link's redirectTo isn't
+// allow-listed. Catch that synchronously (before the client strips the hash)
+// and carry the recovery tokens over to the reset form.
+if (typeof window !== 'undefined' && window.location.pathname !== '/reset-password' &&
+  /(^#|&)type=recovery(&|$)/.test(window.location.hash)) {
+  window.location.replace(`/reset-password${window.location.hash}`);
+}
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -42,6 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+      if (session?.user) identify(session.user.id);
       if (session?.user) void fetchUserRole(session.user.id);
       else {
         setUserRole(null);
@@ -50,6 +59,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        // A password-reset link that Supabase sent back to the Site URL
+        // (e.g. redirect URL not allow-listed) would otherwise leave the
+        // student signed in on the landing page/console without ever
+        // choosing a new password. Send them to the reset form instead.
+        if (event === 'PASSWORD_RECOVERY' && window.location.pathname !== '/reset-password') {
+          window.location.replace('/reset-password');
+          return;
+        }
+        if (event === 'SIGNED_IN' && session?.user) identify(session.user.id);
+        if (event === 'SIGNED_OUT') resetAnalytics();
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
@@ -73,6 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
   const signOut = async () => {
     await supabase.auth.signOut();
+    resetAnalytics();
     setUser(null);
     setSession(null);
     setUserRole(null);
