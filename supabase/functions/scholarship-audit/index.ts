@@ -528,9 +528,14 @@ async function auditStaged(s: Record<string, unknown>, students: Record<string, 
   // Claim the row so an overlapping run (cron + console button) can't promote
   // it twice. Every outcome below moves it out of "auditing".
   const claimFrom = s.status === "auditing" ? "auditing" : "needs_review";
-  const { data: claimed } = await supabase.from("scholarship_staging")
+  let claim = supabase.from("scholarship_staging")
     .update({ status: "auditing", audit_ran_at: new Date().toISOString() })
-    .eq("id", s.id).eq("status", claimFrom).select("id");
+    .eq("id", s.id).eq("status", claimFrom);
+  // A stale claim is only re-taken while it is still stale, so two runs can't
+  // both take over the same abandoned row.
+  if (claimFrom === "auditing") claim = claim.lt("audit_ran_at", new Date(Date.now() - CLAIM_STALE_MS).toISOString());
+  const { data: claimed, error: claimErr } = await claim.select("id");
+  if (claimErr) throw new Error(`Could not claim staged row ${s.id}: ${claimErr.message}`);
   if (!claimed || (claimed as unknown[]).length === 0) return { outcome: "skipped" as const, criteria: {} as CriteriaMap };
 
   const { url, name, criteria, passed, hardFail, failures, extracted } = await evaluateStaged(s, students);
@@ -709,9 +714,9 @@ serve(async (req) => {
   ];
   if (auditRows.length) await supabase.from("audit_results").insert(auditRows);
 
-  const notes = `Live: ${live.length} checked, ${deactivated.length} deactivated${deactivated.length ? ` (${deactivated.map((x) => x.s.name).join("; ")})` : ""}. Staged: ${staged.length} checked, ${promoted.length} promoted${promoted.length ? ` (${promoted.map((x) => x.s.name ?? x.s.title).join("; ")})` : ""}, ${held.length} held, ${rejected.length} rejected, ${expired.length} expired.`;
-  await supabase.from("audit_sessions").update({ total_tested: live.length + staged.length, total_passed: liveResults.filter((x) => x.r.passed).length + promoted.length, total_swept: deactivated.length + rejected.length + expired.length, total_promoted: promoted.length, notes }).eq("id", sessionId);
-  await supabase.from("pipeline_logs").insert({ ran_at: new Date().toISOString(), status: "audit", scholarships_checked: live.length + staged.length, scholarships_approved: promoted.length, scholarships_quarantined: deactivated.length + rejected.length, scholarships_deactivated: deactivated.length, notes });
+  const notes = `Live: ${live.length} checked, ${deactivated.length} deactivated${deactivated.length ? ` (${deactivated.map((x) => x.s.name).join("; ")})` : ""}. Staged: ${stagedResults.length} checked, ${promoted.length} promoted${promoted.length ? ` (${promoted.map((x) => x.s.name ?? x.s.title).join("; ")})` : ""}, ${held.length} held, ${rejected.length} rejected, ${expired.length} expired.`;
+  await supabase.from("audit_sessions").update({ total_tested: live.length + stagedResults.length, total_passed: liveResults.filter((x) => x.r.passed).length + promoted.length, total_swept: deactivated.length + rejected.length + expired.length, total_promoted: promoted.length, notes }).eq("id", sessionId);
+  await supabase.from("pipeline_logs").insert({ ran_at: new Date().toISOString(), status: "audit", scholarships_checked: live.length + stagedResults.length, scholarships_approved: promoted.length, scholarships_quarantined: deactivated.length + rejected.length, scholarships_deactivated: deactivated.length, notes });
 
   return new Response(JSON.stringify({ session_id: sessionId, live_checked: live.length, deactivated: deactivated.length, staged_checked: staged.length, promoted: promoted.length, held: held.length, rejected: rejected.length, expired: expired.length, notes }), { status: 200, headers: { "Content-Type": "application/json" } });
 });

@@ -77,7 +77,8 @@ t('class years convert to absolute graduation years (no July drift)', () => {
   const student = { ...base, graduation_year: 2028 };
   assert.equal(evaluateMatch(student, rules, new Date('2027-04-15T00:00:00Z')).verdict, 'eligible');
   assert.equal(evaluateMatch(student, rules, new Date('2027-08-15T00:00:00Z')).verdict, 'eligible', 'same student still matches after July');
-  assert.deepEqual(classYearsToGradRange(['freshman', 'senior'], NOW), { min: 2027, max: 2030 });
+  assert.deepEqual(classYearsToGradRange(['freshman', 'senior'], NOW), { min: 2026, max: 2030 }, 'fall: December graduates count as seniors');
+  assert.deepEqual(classYearsToGradRange(['senior'], new Date('2027-03-01T00:00:00Z')), { min: 2027, max: 2027 });
   assert.equal(classYearsToGradRange([], NOW), null);
 });
 

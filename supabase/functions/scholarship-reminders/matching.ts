@@ -164,7 +164,9 @@ export function classYearsToGradRange(years: string[], readAt: Date): { min: num
   const endYear = readAt.getUTCMonth() >= 6 ? readAt.getUTCFullYear() + 1 : readAt.getUTCFullYear();
   const grads = years.filter((y) => y in offset).map((y) => endYear + offset[y]);
   if (grads.length === 0) return null;
-  return { min: Math.min(...grads), max: Math.max(...grads) };
+  // Fall-semester December graduates (Class of endYear - 1) are still seniors.
+  const decemberGrads = years.includes('senior') && readAt.getUTCMonth() >= 6 ? 1 : 0;
+  return { min: Math.min(...grads) - decemberGrads, max: Math.max(...grads) };
 }
 
 /**
