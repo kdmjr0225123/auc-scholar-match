@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { isEligible } from "../_shared/eligibility.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -34,33 +35,17 @@ interface EligibilityRule {
 interface ScholarshipWithRules {
   id: string;
   is_active: boolean | null;
+  min_gpa: number | null;
+  allowed_class_years: string | null;
   eligibility_rules: EligibilityRule | EligibilityRule[] | null;
 }
 
-// This is a DELIBERATE, faithful mirror of Dashboard.tsx's calculateMatches
-// — not an idealized eligibility spec. The real student dashboard only
-// hard-excludes a scholarship on eligible_schools and graduation_year;
-// GPA and eligible_majors are checked but never exclude a match, they only
-// lower the displayed match percentage. So this synthetic check counts a
-// scholarship as "matched" under the exact same rule: school + grad year
-// only. If that ever changes in Dashboard.tsx, this predicate must change
-// with it, or the canaries will be monitoring a matching system that no
-// longer exists.
-function isMatch(profile: SyntheticProfile, rules: EligibilityRule | null): boolean {
-  if (!rules) return false; // no eligibility_rules row -> unmatchable, same as the dashboard
-
-  const schools = rules.eligible_schools ?? [];
-  const schoolMatch = schools.length === 0 || schools.includes(profile.school);
-  if (!schoolMatch) return false;
-
-  const yearInRange =
-    (!rules.graduation_year_min || profile.graduation_year >= rules.graduation_year_min) &&
-    (!rules.graduation_year_max || profile.graduation_year <= rules.graduation_year_max);
-  if (!yearInRange) return false;
-
-  // GPA and eligible_majors are intentionally NOT checked here — the real
-  // app doesn't exclude on them either (confirmed against Dashboard.tsx).
-  return true;
+// Uses the exact same eligibility module as the student dashboard
+// (_shared/eligibility.ts <-> src/lib/eligibility.ts), so the canaries
+// monitor the real matching rules: school, grad-year range, class year,
+// GPA and major are all hard excludes.
+function isMatch(profile: SyntheticProfile, rules: EligibilityRule | null, scholarship: ScholarshipWithRules): boolean {
+  return isEligible(profile, rules, scholarship);
 }
 
 serve(async (req: Request) => {
@@ -81,7 +66,7 @@ serve(async (req: Request) => {
         supabase.from("synthetic_profiles").select("*"),
         supabase
           .from("scholarships")
-          .select("id, is_active, eligibility_rules (*)")
+          .select("id, is_active, min_gpa, allowed_class_years, eligibility_rules (*)")
           .eq("is_active", true),
       ]);
 
@@ -109,7 +94,7 @@ serve(async (req: Request) => {
         const rules = Array.isArray(scholarship.eligibility_rules)
           ? scholarship.eligibility_rules[0] ?? null
           : scholarship.eligibility_rules;
-        if (isMatch(profile, rules ?? null)) matchCount++;
+        if (isMatch(profile, rules ?? null, scholarship)) matchCount++;
       }
 
       const passed = matchCount >= MIN_MATCHES;

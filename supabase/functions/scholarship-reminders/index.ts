@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { isEligible, type RulesLike, type ScholarshipLike, type StudentLike } from "../_shared/eligibility.ts";
 
 // Deadline reminders (7 days and 2 days out) for matching students.
 // Skips students who unsubscribed; every email carries a one-click unsubscribe.
@@ -32,17 +33,9 @@ function esc(s: unknown): string {
   return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
 }
 
-function isMatch(student: Record<string, unknown>, rules: Record<string, unknown> | null): boolean {
+function isMatch(student: Record<string, unknown>, rules: Record<string, unknown> | null, scholarship: Record<string, unknown>): boolean {
   if (!student.email) return false;
-  if (!rules) return true;
-  const schools = (rules.eligible_schools as string[] | null) ?? [];
-  if (schools.length > 0 && !schools.includes(student.school as string)) return false;
-  if (rules.min_gpa && (student.gpa as number) < (rules.min_gpa as number)) return false;
-  if (rules.graduation_year_min && (student.graduation_year as number) < (rules.graduation_year_min as number)) return false;
-  if (rules.graduation_year_max && (student.graduation_year as number) > (rules.graduation_year_max as number)) return false;
-  const majors = (rules.eligible_majors as string[] | null) ?? [];
-  if (majors.length > 0 && !majors.includes(student.major as string)) return false;
-  return true;
+  return isEligible(student as StudentLike, rules as RulesLike | null, scholarship as ScholarshipLike);
 }
 
 serve(async (req) => {
@@ -88,7 +81,7 @@ serve(async (req) => {
     const daysLeft = scholarship.deadline === fmt(addDays(today, 2)) ? 2 : 7;
     const urgencyColor = daysLeft === 2 ? "#ff6b6b" : "#E8B84B";
     const urgencyLabel = daysLeft === 2 ? "Last 2 days" : "7 days left";
-    const matching = students.filter((s: Record<string, unknown>) => isMatch(s, rules));
+    const matching = students.filter((s: Record<string, unknown>) => isMatch(s, rules, scholarship));
     if (matching.length === 0) continue;
 
     const amount = Number(scholarship.award_amount) > 0 ? `$${Number(scholarship.award_amount).toLocaleString("en-US")}` : "Award varies";

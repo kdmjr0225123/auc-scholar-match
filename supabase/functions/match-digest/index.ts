@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { isEligible, type RulesLike, type ScholarshipLike, type StudentLike } from "../_shared/eligibility.ts";
 
 // Daily "new matches" email. Replaces the per-scholarship email that fired on
 // every promotion: each student gets at most ONE email per day, only when at
@@ -23,16 +24,8 @@ async function hmacHex(secret: string, message: string): Promise<string> {
   return Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 40);
 }
 
-function isMatch(student: Row, rules: Row | null): boolean {
-  if (!rules) return true;
-  const schools = (rules.eligible_schools as string[] | null) ?? [];
-  if (schools.length > 0 && !schools.includes(student.school as string)) return false;
-  if (rules.min_gpa && (student.gpa as number) < (rules.min_gpa as number)) return false;
-  if (rules.graduation_year_min && (student.graduation_year as number) < (rules.graduation_year_min as number)) return false;
-  if (rules.graduation_year_max && (student.graduation_year as number) > (rules.graduation_year_max as number)) return false;
-  const majors = (rules.eligible_majors as string[] | null) ?? [];
-  if (majors.length > 0 && !majors.includes(student.major as string)) return false;
-  return true;
+function isMatch(student: Row, rules: Row | null, scholarship: Row): boolean {
+  return isEligible(student as StudentLike, rules as RulesLike | null, scholarship as ScholarshipLike);
 }
 
 function esc(s: unknown): string {
@@ -92,7 +85,7 @@ Deno.serve(async (req) => {
   const now = new Date();
   const today = now.toISOString().slice(0, 10);
   const { data: scholarships } = await supabase.from("scholarships")
-    .select("id, name, provider, award_amount, deadline, created_at")
+    .select("id, name, provider, award_amount, deadline, created_at, min_gpa, allowed_class_years")
     .eq("is_active", true).eq("pipeline_status", "approved");
   const live = ((scholarships ?? []) as Row[]).filter((s) => !s.deadline || (s.deadline as string) >= today);
   if (live.length === 0) return new Response(JSON.stringify({ sent: 0, reason: "no live scholarships" }), { status: 200 });
@@ -110,7 +103,7 @@ Deno.serve(async (req) => {
     const since = Math.max(lastSent, now.getTime() - FIRST_RUN_LOOKBACK_MS * 7); // cap at one week even after a pause
     const fresh = live
       .filter((s) => new Date(s.created_at as string).getTime() > since)
-      .filter((s) => isMatch(st, rulesBy.get(s.id as string) ?? null))
+      .filter((s) => isMatch(st, rulesBy.get(s.id as string) ?? null, s))
       .sort((a, b) => Number(b.award_amount ?? 0) - Number(a.award_amount ?? 0));
     if (fresh.length === 0) continue;
 
