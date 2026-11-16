@@ -1,0 +1,1119 @@
+{
+  "_meta": {
+    "verified": "2026-11-16",
+    "method": "Web search of sponsor pages and university listings; WebFetch of sponsor pages pending approval. confidence=high: multiple sources agree; medium: inferred or older cycle; low: not verified.",
+    "fields_taxonomy": "stem, engineering, physics, biology, finance, accounting, business, economics, actuarial, risk_management, insurance, education, counseling, psychology, health, kinesiology, environmental, sustainability, agriculture, horticulture, botany, archaeology, anthropology, public_administration, public_policy, criminal_justice, transportation, manufacturing, information_technology, social_science, mathematics, statistics, any"
+  },
+  "scholarships": [
+    {
+      "name": "Sigma Pi Sigma Leadership Scholarship (Fall 2026)",
+      "deadline": "2026-11-16",
+      "award": 6000,
+      "class_years": [
+        "freshman",
+        "sophomore",
+        "junior",
+        "senior"
+      ],
+      "min_gpa": null,
+      "gender": "any",
+      "fields": [
+        "physics"
+      ],
+      "schools": [
+        "any_auc"
+      ],
+      "identity": [],
+      "citizenship": "any",
+      "enrollment": "undergrad",
+      "membership_required": "Sigma Pi Sigma / Society of Physics Students",
+      "nomination_required": false,
+      "career_intent": null,
+      "confidence": "low",
+      "notes": "Not verified; closes tonight.",
+      "db_corrections": [],
+      "expires_today": true
+    },
+    {
+      "name": "TJX Scholarship Program 2026-2027",
+      "deadline": "2026-11-16",
+      "award": 10000,
+      "class_years": [
+        "freshman",
+        "sophomore",
+        "junior",
+        "senior"
+      ],
+      "min_gpa": null,
+      "gender": "any",
+      "fields": [
+        "any"
+      ],
+      "schools": [
+        "morehouse",
+        "spelman",
+        "clark_atlanta"
+      ],
+      "identity": [],
+      "citizenship": "any",
+      "enrollment": "undergrad",
+      "membership_required": null,
+      "nomination_required": false,
+      "career_intent": null,
+      "confidence": "low",
+      "notes": "UNCF program; details not verified; closes tonight.",
+      "db_corrections": [],
+      "expires_today": true
+    },
+    {
+      "name": "UNCF Women in STEM Scholarship Program 2026-2027",
+      "deadline": "2026-11-17",
+      "award": 5000,
+      "class_years": [
+        "junior"
+      ],
+      "min_gpa": null,
+      "gender": "female",
+      "fields": [
+        "stem",
+        "finance"
+      ],
+      "schools": [
+        "spelman",
+        "clark_atlanta",
+        "morris_brown"
+      ],
+      "identity": [
+        "black"
+      ],
+      "citizenship": "any",
+      "enrollment": "undergrad",
+      "membership_required": null,
+      "nomination_required": false,
+      "career_intent": null,
+      "confidence": "medium",
+      "notes": "Black women, STEM or financial-services majors, need-based (FAFSA). Junior-level in past cycles.",
+      "db_corrections": [
+        "gender=female",
+        "majors=STEM/finance",
+        "class_years=junior"
+      ],
+      "expires_today": false
+    },
+    {
+      "name": "Point Foundation Flagship Scholarship 2027",
+      "deadline": "2026-11-19",
+      "award": 15000,
+      "class_years": [
+        "freshman",
+        "sophomore",
+        "junior",
+        "senior"
+      ],
+      "min_gpa": 3.3,
+      "gender": "any",
+      "fields": [
+        "any"
+      ],
+      "schools": [
+        "any_auc"
+      ],
+      "identity": [
+        "lgbtq_or_ally"
+      ],
+      "citizenship": "any",
+      "enrollment": "undergrad_or_grad",
+      "membership_required": null,
+      "nomination_required": false,
+      "career_intent": null,
+      "confidence": "high",
+      "notes": "LGBTQ+ or ally; full-time; no fully-online programs. Identity can't be checked -> 'may qualify' bucket.",
+      "db_corrections": [
+        "identity=lgbtq_or_ally"
+      ],
+      "expires_today": false
+    },
+    {
+      "name": "Russell Scholars Program",
+      "deadline": "2026-11-20",
+      "award": 5650,
+      "class_years": [
+        "sophomore"
+      ],
+      "min_gpa": 3.5,
+      "gender": "any",
+      "fields": [
+        "any"
+      ],
+      "schools": [
+        "clark_atlanta"
+      ],
+      "identity": [],
+      "citizenship": "any",
+      "enrollment": "undergrad",
+      "membership_required": null,
+      "nomination_required": false,
+      "career_intent": null,
+      "confidence": "medium",
+      "notes": "Listed on CAU's AcademicWorks portal = CAU institutional scholarship.",
+      "db_corrections": [
+        "eligible_schools=clark_atlanta"
+      ],
+      "expires_today": false
+    },
+    {
+      "name": "GBES Sustainability Scholarship for Rising College Seniors",
+      "deadline": "2026-11-20",
+      "award": 2500,
+      "class_years": [
+        "junior"
+      ],
+      "min_gpa": 3.0,
+      "gender": "any",
+      "fields": [
+        "sustainability",
+        "environmental"
+      ],
+      "schools": [
+        "any_auc"
+      ],
+      "identity": [],
+      "citizenship": "us_or_pr",
+      "enrollment": "undergrad",
+      "membership_required": null,
+      "nomination_required": false,
+      "career_intent": null,
+      "confidence": "high",
+      "notes": "Degree program must be related to sustainability.",
+      "db_corrections": [
+        "majors=sustainability-related"
+      ],
+      "expires_today": false
+    },
+    {
+      "name": "Eunice Walker Johnson Scholarship 2026-2027",
+      "deadline": "2026-11-23",
+      "award": 5000,
+      "class_years": [
+        "freshman",
+        "sophomore",
+        "junior",
+        "senior"
+      ],
+      "min_gpa": null,
+      "gender": "any",
+      "fields": [
+        "any"
+      ],
+      "schools": [
+        "morehouse",
+        "spelman",
+        "clark_atlanta"
+      ],
+      "identity": [],
+      "citizenship": "any",
+      "enrollment": "undergrad",
+      "membership_required": null,
+      "nomination_required": false,
+      "career_intent": null,
+      "confidence": "medium",
+      "notes": "Need-based; undergrads at UNCF member institutions. Morris Brown UNCF membership unverified.",
+      "db_corrections": [],
+      "expires_today": false
+    },
+    {
+      "name": "Barbara Lotze Scholarship for Future Physics Teachers",
+      "deadline": "2026-12-01",
+      "award": 3000,
+      "class_years": [
+        "freshman",
+        "sophomore",
+        "junior",
+        "senior"
+      ],
+      "min_gpa": null,
+      "gender": "any",
+      "fields": [
+        "physics",
+        "education"
+      ],
+      "schools": [
+        "any_auc"
+      ],
+      "identity": [],
+      "citizenship": "us_citizen",
+      "enrollment": "undergrad",
+      "membership_required": null,
+      "nomination_required": false,
+      "career_intent": "high school physics teaching",
+      "confidence": "high",
+      "notes": "Must be in/planning a physics teacher-prep curriculum.",
+      "db_corrections": [
+        "majors=physics/education"
+      ],
+      "expires_today": false
+    },
+    {
+      "name": "WTS Strategic Partner Scholarships 2027",
+      "deadline": "2026-12-11",
+      "award": 5000,
+      "class_years": [
+        "freshman",
+        "sophomore",
+        "junior",
+        "senior"
+      ],
+      "min_gpa": 3.0,
+      "gender": "female",
+      "fields": [
+        "transportation",
+        "engineering",
+        "planning",
+        "stem"
+      ],
+      "schools": [
+        "any_auc"
+      ],
+      "identity": [],
+      "citizenship": "any",
+      "enrollment": "undergrad_or_grad",
+      "membership_required": null,
+      "nomination_required": false,
+      "career_intent": null,
+      "confidence": "medium",
+      "notes": "WTS awards target women pursuing transportation careers.",
+      "db_corrections": [
+        "gender=female",
+        "majors=transportation-related"
+      ],
+      "expires_today": false
+    },
+    {
+      "name": "SAA Historically Underrecognized Student Archaeology Scholarship (HUSAS) 2027",
+      "deadline": "2027-01-31",
+      "award": 3000,
+      "class_years": [
+        "freshman",
+        "sophomore",
+        "junior",
+        "senior"
+      ],
+      "min_gpa": null,
+      "gender": "any",
+      "fields": [
+        "archaeology",
+        "anthropology"
+      ],
+      "schools": [
+        "any_auc"
+      ],
+      "identity": [
+        "underrepresented_minority"
+      ],
+      "citizenship": "us_or_ca",
+      "enrollment": "undergrad_or_grad",
+      "membership_required": null,
+      "nomination_required": false,
+      "career_intent": null,
+      "confidence": "high",
+      "notes": "Funds archaeological training. Official deadline Jan 31.",
+      "db_corrections": [
+        "deadline=2027-01-31 (db has 2026-12-14)",
+        "majors=archaeology"
+      ],
+      "expires_today": false
+    },
+    {
+      "name": "GFOA Clark Burrus Public Service Academic Scholarship 2027",
+      "deadline": "2026-12-18",
+      "award": 10000,
+      "class_years": [
+        "junior",
+        "senior"
+      ],
+      "min_gpa": null,
+      "gender": "any",
+      "fields": [
+        "public_administration",
+        "finance",
+        "accounting",
+        "economics",
+        "business"
+      ],
+      "schools": [
+        "any_auc"
+      ],
+      "identity": [
+        "underrepresented_minority"
+      ],
+      "citizenship": "us_or_ca",
+      "enrollment": "undergrad_or_grad",
+      "membership_required": null,
+      "nomination_required": false,
+      "career_intent": "state/local government finance",
+      "confidence": "medium",
+      "notes": "",
+      "db_corrections": [
+        "majors=public finance-related"
+      ],
+      "expires_today": false
+    },
+    {
+      "name": "GFOA Frank L. Greathouse Government Accounting Scholarship 2027",
+      "deadline": "2026-12-18",
+      "award": 10000,
+      "class_years": [
+        "junior",
+        "senior"
+      ],
+      "min_gpa": null,
+      "gender": "any",
+      "fields": [
+        "accounting",
+        "finance"
+      ],
+      "schools": [
+        "any_auc"
+      ],
+      "identity": [],
+      "citizenship": "us_or_ca",
+      "enrollment": "undergrad_or_grad",
+      "membership_required": null,
+      "nomination_required": false,
+      "career_intent": "state/local government finance",
+      "confidence": "high",
+      "notes": "Full-time upper-level undergrad or grad in accounting.",
+      "db_corrections": [
+        "majors=accounting/finance"
+      ],
+      "expires_today": false
+    },
+    {
+      "name": "RevPart STEM Scholarship 2027",
+      "deadline": "2026-12-31",
+      "award": 2500,
+      "class_years": [
+        "freshman",
+        "sophomore",
+        "junior",
+        "senior"
+      ],
+      "min_gpa": null,
+      "gender": "any",
+      "fields": [
+        "stem"
+      ],
+      "schools": [
+        "any_auc"
+      ],
+      "identity": [],
+      "citizenship": "any",
+      "enrollment": "undergrad_or_grad",
+      "membership_required": null,
+      "nomination_required": false,
+      "career_intent": null,
+      "confidence": "high",
+      "notes": "Any STEM major at an accredited US college.",
+      "db_corrections": [
+        "majors=STEM"
+      ],
+      "expires_today": false
+    },
+    {
+      "name": "Applegate-Jackson-Parks Future Teacher Scholarship",
+      "deadline": "2026-12-31",
+      "award": 1000,
+      "class_years": [
+        "freshman",
+        "sophomore",
+        "junior",
+        "senior"
+      ],
+      "min_gpa": null,
+      "gender": "any",
+      "fields": [
+        "education"
+      ],
+      "schools": [
+        "any_auc"
+      ],
+      "identity": [],
+      "citizenship": "us_citizen",
+      "enrollment": "undergrad_or_grad",
+      "membership_required": null,
+      "nomination_required": false,
+      "career_intent": null,
+      "confidence": "high",
+      "notes": "Education majors; essay on compulsory unionism in education.",
+      "db_corrections": [
+        "majors=education"
+      ],
+      "expires_today": false
+    },
+    {
+      "name": "DOE Computational Science Graduate Fellowship (CSGF) 2027-2028",
+      "deadline": "2027-01-07",
+      "award": 45000,
+      "class_years": [
+        "senior"
+      ],
+      "min_gpa": null,
+      "gender": "any",
+      "fields": [
+        "stem"
+      ],
+      "schools": [
+        "any_auc"
+      ],
+      "identity": [],
+      "citizenship": "us_or_pr",
+      "enrollment": "grad_bound",
+      "membership_required": null,
+      "nomination_required": false,
+      "career_intent": "full-time PhD in computational science/engineering",
+      "confidence": "high",
+      "notes": "Senior undergrads planning full-time PhD study. Show only to seniors, labeled grad-school funding.",
+      "db_corrections": [
+        "enrollment=grad_bound"
+      ],
+      "expires_today": false
+    },
+    {
+      "name": "GCA Spoldi-Stewart Agriculture Scholarship 2027",
+      "deadline": "2027-01-15",
+      "award": 5000,
+      "class_years": [
+        "freshman",
+        "sophomore",
+        "junior",
+        "senior"
+      ],
+      "min_gpa": null,
+      "gender": "any",
+      "fields": [
+        "agriculture",
+        "environmental",
+        "biology"
+      ],
+      "schools": [
+        "any_auc"
+      ],
+      "identity": [],
+      "citizenship": "us_or_pr",
+      "enrollment": "undergrad",
+      "membership_required": null,
+      "nomination_required": false,
+      "career_intent": null,
+      "confidence": "medium",
+      "notes": "Study of agriculture. Only one GCA application per year.",
+      "db_corrections": [
+        "majors=agriculture-related"
+      ],
+      "expires_today": false
+    },
+    {
+      "name": "GCA Keller Scholarship in Conservation Horticulture 2027",
+      "deadline": "2027-01-15",
+      "award": 5000,
+      "class_years": [
+        "sophomore",
+        "junior",
+        "senior"
+      ],
+      "min_gpa": null,
+      "gender": "any",
+      "fields": [
+        "biology",
+        "horticulture",
+        "environmental"
+      ],
+      "schools": [
+        "any_auc"
+      ],
+      "identity": [],
+      "citizenship": "us_or_pr",
+      "enrollment": "undergrad",
+      "membership_required": null,
+      "nomination_required": false,
+      "career_intent": null,
+      "confidence": "high",
+      "notes": "Declared major in biology, horticulture or related.",
+      "db_corrections": [
+        "majors=biology/horticulture"
+      ],
+      "expires_today": false
+    },
+    {
+      "name": "Spencer Educational Foundation Undergraduate Scholarship 2027",
+      "deadline": "2027-01-15",
+      "award": 10000,
+      "class_years": [
+        "junior",
+        "senior"
+      ],
+      "min_gpa": null,
+      "gender": "any",
+      "fields": [
+        "risk_management",
+        "insurance",
+        "finance",
+        "business",
+        "actuarial",
+        "information_technology"
+      ],
+      "schools": [
+        "any_auc"
+      ],
+      "identity": [],
+      "citizenship": "us_or_ca",
+      "enrollment": "undergrad",
+      "membership_required": null,
+      "nomination_required": false,
+      "career_intent": "risk management / insurance",
+      "confidence": "high",
+      "notes": "Full-time juniors/seniors; major or minor in a risk-management discipline.",
+      "db_corrections": [
+        "class_years=junior,senior",
+        "majors=risk-management disciplines"
+      ],
+      "expires_today": false
+    },
+    {
+      "name": "Elie Wiesel Prize in Ethics Essay Contest 2027",
+      "deadline": "2027-01-20",
+      "award": 10000,
+      "class_years": [
+        "junior",
+        "senior"
+      ],
+      "min_gpa": null,
+      "gender": "any",
+      "fields": [
+        "any"
+      ],
+      "schools": [
+        "any_auc"
+      ],
+      "identity": [],
+      "citizenship": "any",
+      "enrollment": "undergrad",
+      "membership_required": null,
+      "nomination_required": false,
+      "career_intent": null,
+      "confidence": "high",
+      "notes": "Full-time juniors and seniors at accredited 4-year US colleges; any major. Prize up to $10K (1st place).",
+      "db_corrections": [
+        "class_years=junior,senior"
+      ],
+      "expires_today": false
+    },
+    {
+      "name": "Boren Scholarship 2027-2028",
+      "deadline": "2027-01-27",
+      "award": 25000,
+      "class_years": [
+        "freshman",
+        "sophomore",
+        "junior"
+      ],
+      "min_gpa": null,
+      "gender": "any",
+      "fields": [
+        "any"
+      ],
+      "schools": [
+        "any_auc"
+      ],
+      "identity": [],
+      "citizenship": "us_citizen",
+      "enrollment": "undergrad",
+      "membership_required": null,
+      "nomination_required": false,
+      "career_intent": "study abroad (critical-language region) + federal service requirement",
+      "confidence": "medium",
+      "notes": "Must remain undergrad through the program, so graduating seniors are generally out.",
+      "db_corrections": [
+        "class_years=freshman-junior",
+        "requires study-abroad plan"
+      ],
+      "expires_today": false
+    },
+    {
+      "name": "NOAA Ernest F. Hollings Undergraduate Scholarship",
+      "deadline": "2027-01-31",
+      "award": 9500,
+      "class_years": [
+        "sophomore"
+      ],
+      "min_gpa": 3.0,
+      "gender": "any",
+      "fields": [
+        "stem",
+        "social_science",
+        "education"
+      ],
+      "schools": [
+        "any_auc"
+      ],
+      "identity": [],
+      "citizenship": "us_citizen",
+      "enrollment": "undergrad",
+      "membership_required": null,
+      "nomination_required": false,
+      "career_intent": null,
+      "confidence": "high",
+      "notes": "Full-time sophomores in NOAA mission fields.",
+      "db_corrections": [
+        "class_years=sophomore",
+        "min_gpa=3.0"
+      ],
+      "expires_today": false
+    },
+    {
+      "name": "AIAA Foundation Undergraduate Scholarships 2027",
+      "deadline": "2027-01-31",
+      "award": 10000,
+      "class_years": [
+        "sophomore",
+        "junior",
+        "senior"
+      ],
+      "min_gpa": 3.3,
+      "gender": "any",
+      "fields": [
+        "engineering",
+        "stem"
+      ],
+      "schools": [
+        "any_auc"
+      ],
+      "identity": [],
+      "citizenship": "any",
+      "enrollment": "undergrad",
+      "membership_required": "AIAA student member (~$30)",
+      "nomination_required": false,
+      "career_intent": "aerospace",
+      "confidence": "medium",
+      "notes": "Some named awards accept 2.5 GPA; general bar 3.3.",
+      "db_corrections": [
+        "min_gpa=3.3",
+        "majors=aerospace science/engineering"
+      ],
+      "expires_today": false
+    },
+    {
+      "name": "SME Education Foundation Scholarships 2027-2028",
+      "deadline": "2027-02-01",
+      "award": 20000,
+      "class_years": [
+        "freshman",
+        "sophomore",
+        "junior",
+        "senior"
+      ],
+      "min_gpa": 2.0,
+      "gender": "any",
+      "fields": [
+        "engineering",
+        "manufacturing",
+        "stem"
+      ],
+      "schools": [
+        "any_auc"
+      ],
+      "identity": [],
+      "citizenship": "us_or_ca",
+      "enrollment": "undergrad_or_grad",
+      "membership_required": null,
+      "nomination_required": false,
+      "career_intent": "manufacturing",
+      "confidence": "high",
+      "notes": "Manufacturing/engineering degree paths.",
+      "db_corrections": [
+        "majors=engineering/manufacturing"
+      ],
+      "expires_today": false
+    },
+    {
+      "name": "ACFE Ritchie-Jennings Memorial Scholarship 2027-2028",
+      "deadline": "2027-02-01",
+      "award": 10000,
+      "class_years": [
+        "freshman",
+        "sophomore",
+        "junior"
+      ],
+      "min_gpa": null,
+      "gender": "any",
+      "fields": [
+        "accounting",
+        "business",
+        "finance",
+        "criminal_justice"
+      ],
+      "schools": [
+        "any_auc"
+      ],
+      "identity": [],
+      "citizenship": "any",
+      "enrollment": "undergrad_or_grad",
+      "membership_required": null,
+      "nomination_required": false,
+      "career_intent": "anti-fraud",
+      "confidence": "high",
+      "notes": "Declared major or minor in accounting, business admin, finance or criminal justice.",
+      "db_corrections": [
+        "majors=accounting/business/finance/CJ"
+      ],
+      "expires_today": false
+    },
+    {
+      "name": "GCA Zeller Summer Scholarship in Medicinal Botany 2027",
+      "deadline": "2027-02-01",
+      "award": 3000,
+      "class_years": [
+        "freshman",
+        "sophomore",
+        "junior",
+        "senior"
+      ],
+      "min_gpa": null,
+      "gender": "any",
+      "fields": [
+        "botany",
+        "biology",
+        "environmental"
+      ],
+      "schools": [
+        "any_auc"
+      ],
+      "identity": [],
+      "citizenship": "us_or_pr",
+      "enrollment": "undergrad",
+      "membership_required": null,
+      "nomination_required": false,
+      "career_intent": null,
+      "confidence": "high",
+      "notes": "Summer study in medicinal botany after any undergrad year.",
+      "db_corrections": [
+        "majors=botany/biology"
+      ],
+      "expires_today": false
+    },
+    {
+      "name": "Harry S. Truman Scholarship 2027",
+      "deadline": "2027-02-02",
+      "award": 30000,
+      "class_years": [
+        "junior"
+      ],
+      "min_gpa": null,
+      "gender": "any",
+      "fields": [
+        "any"
+      ],
+      "schools": [
+        "any_auc"
+      ],
+      "identity": [],
+      "citizenship": "us_citizen",
+      "enrollment": "undergrad",
+      "membership_required": null,
+      "nomination_required": true,
+      "career_intent": "public service (grad school)",
+      "confidence": "high",
+      "notes": "Upper quarter of class; must be nominated by campus Truman rep. Campus deadlines fall in November, so check Morehouse's.",
+      "db_corrections": [
+        "nomination_required",
+        "effective deadline=campus deadline"
+      ],
+      "expires_today": false
+    },
+    {
+      "name": "ZNEF HBCU Scholarship",
+      "deadline": "2027-02-04",
+      "award": 7000,
+      "class_years": [
+        "freshman",
+        "sophomore",
+        "junior",
+        "senior"
+      ],
+      "min_gpa": 3.0,
+      "gender": "any",
+      "fields": [
+        "any"
+      ],
+      "schools": [
+        "any_auc"
+      ],
+      "identity": [],
+      "citizenship": "any",
+      "enrollment": "undergrad",
+      "membership_required": null,
+      "nomination_required": false,
+      "career_intent": null,
+      "confidence": "medium",
+      "notes": "Zeta Phi Beta NEF; membership not required for most.",
+      "db_corrections": [],
+      "expires_today": false
+    },
+    {
+      "name": "ZNEF Magdalene Barber Fennell Endowment Scholarship",
+      "deadline": "2027-02-04",
+      "award": 5000,
+      "class_years": [
+        "freshman",
+        "sophomore",
+        "junior",
+        "senior"
+      ],
+      "min_gpa": 2.8,
+      "gender": "any",
+      "fields": [
+        "any"
+      ],
+      "schools": [
+        "any_auc"
+      ],
+      "identity": [],
+      "citizenship": "any",
+      "enrollment": "undergrad",
+      "membership_required": null,
+      "nomination_required": false,
+      "career_intent": null,
+      "confidence": "low",
+      "notes": "Specific criteria not verified.",
+      "db_corrections": [],
+      "expires_today": false
+    },
+    {
+      "name": "ZNEF Lullelia W. Harrison Counseling Scholarship",
+      "deadline": "2027-02-04",
+      "award": 7000,
+      "class_years": [
+        "freshman",
+        "sophomore",
+        "junior",
+        "senior"
+      ],
+      "min_gpa": 3.0,
+      "gender": "any",
+      "fields": [
+        "counseling",
+        "psychology"
+      ],
+      "schools": [
+        "any_auc"
+      ],
+      "identity": [],
+      "citizenship": "any",
+      "enrollment": "undergrad_or_grad",
+      "membership_required": null,
+      "nomination_required": false,
+      "career_intent": null,
+      "confidence": "high",
+      "notes": "Degree program in counseling.",
+      "db_corrections": [
+        "majors=counseling"
+      ],
+      "expires_today": false
+    },
+    {
+      "name": "ZNEF General Undergraduate Scholarship",
+      "deadline": "2027-02-04",
+      "award": 7000,
+      "class_years": [
+        "freshman",
+        "sophomore",
+        "junior",
+        "senior"
+      ],
+      "min_gpa": null,
+      "gender": "any",
+      "fields": [
+        "any"
+      ],
+      "schools": [
+        "any_auc"
+      ],
+      "identity": [],
+      "citizenship": "any",
+      "enrollment": "undergrad",
+      "membership_required": null,
+      "nomination_required": false,
+      "career_intent": null,
+      "confidence": "medium",
+      "notes": "",
+      "db_corrections": [],
+      "expires_today": false
+    },
+    {
+      "name": "ZNEF Isabel M. Herson Scholarship in Education",
+      "deadline": "2027-02-04",
+      "award": 7000,
+      "class_years": [
+        "freshman",
+        "sophomore",
+        "junior",
+        "senior"
+      ],
+      "min_gpa": null,
+      "gender": "any",
+      "fields": [
+        "education"
+      ],
+      "schools": [
+        "any_auc"
+      ],
+      "identity": [],
+      "citizenship": "any",
+      "enrollment": "undergrad_or_grad",
+      "membership_required": null,
+      "nomination_required": false,
+      "career_intent": null,
+      "confidence": "high",
+      "notes": "Elementary or secondary education degree.",
+      "db_corrections": [
+        "majors=education"
+      ],
+      "expires_today": false
+    },
+    {
+      "name": "GCA Awards for Summer Environmental Studies 2027",
+      "deadline": "2027-02-05",
+      "award": 3000,
+      "class_years": [
+        "freshman",
+        "sophomore",
+        "junior"
+      ],
+      "min_gpa": null,
+      "gender": "any",
+      "fields": [
+        "environmental",
+        "biology",
+        "agriculture",
+        "sustainability"
+      ],
+      "schools": [
+        "any_auc"
+      ],
+      "identity": [],
+      "citizenship": "us_or_pr",
+      "enrollment": "undergrad",
+      "membership_required": null,
+      "nomination_required": false,
+      "career_intent": null,
+      "confidence": "high",
+      "notes": "Summer environmental coursework/fieldwork.",
+      "db_corrections": [
+        "majors=environmental"
+      ],
+      "expires_today": false
+    },
+    {
+      "name": "Udall Undergraduate Scholarship 2027",
+      "deadline": "2027-03-04",
+      "award": 7000,
+      "class_years": [
+        "sophomore",
+        "junior"
+      ],
+      "min_gpa": null,
+      "gender": "any",
+      "fields": [
+        "environmental",
+        "sustainability",
+        "public_policy",
+        "any_with_env_career"
+      ],
+      "schools": [
+        "any_auc"
+      ],
+      "identity": [],
+      "citizenship": "us_or_pr",
+      "enrollment": "undergrad",
+      "membership_required": null,
+      "nomination_required": true,
+      "career_intent": "environment (any student) or tribal policy/Native health (Native students)",
+      "confidence": "medium",
+      "notes": "Needs campus nomination.",
+      "db_corrections": [
+        "career=environment/tribal",
+        "nomination_required"
+      ],
+      "expires_today": false
+    },
+    {
+      "name": "IABA Scholarship 2027-2028",
+      "deadline": "2027-03-31",
+      "award": 5000,
+      "class_years": [
+        "freshman",
+        "sophomore",
+        "junior",
+        "senior"
+      ],
+      "min_gpa": 3.0,
+      "gender": "any",
+      "fields": [
+        "actuarial",
+        "mathematics",
+        "statistics",
+        "finance",
+        "economics"
+      ],
+      "schools": [
+        "any_auc"
+      ],
+      "identity": [
+        "black"
+      ],
+      "citizenship": "any",
+      "enrollment": "undergrad_or_grad",
+      "membership_required": null,
+      "nomination_required": false,
+      "career_intent": "actuarial",
+      "confidence": "high",
+      "notes": "International Association of Black ACTUARIES (not accountants).",
+      "db_corrections": [
+        "majors=actuarial-track"
+      ],
+      "expires_today": false
+    },
+    {
+      "name": "Shape Plus Fitness Scholarship",
+      "deadline": "2027-08-01",
+      "award": 1500,
+      "class_years": [
+        "freshman",
+        "sophomore",
+        "junior",
+        "senior"
+      ],
+      "min_gpa": null,
+      "gender": "any",
+      "fields": [
+        "health",
+        "biology",
+        "kinesiology",
+        "psychology",
+        "nursing"
+      ],
+      "schools": [
+        "any_auc"
+      ],
+      "identity": [],
+      "citizenship": "any",
+      "enrollment": "undergrad_or_grad",
+      "membership_required": null,
+      "nomination_required": false,
+      "career_intent": null,
+      "confidence": "high",
+      "notes": "Health/fitness-related studies.",
+      "db_corrections": [],
+      "expires_today": false
+    }
+  ]
+}
