@@ -1,0 +1,434 @@
+{
+  "_meta": {
+    "captured": "2026-11-16",
+    "source": "public.scholarships + eligibility_rules, active, deadline>=today"
+  },
+  "scholarships": [
+    {
+      "name": "Sigma Pi Sigma Leadership Scholarship (Fall 2026)",
+      "award_amount": 6000,
+      "deadline": "2026-11-16",
+      "min_gpa": null,
+      "allowed_class_years": null,
+      "eligibility_rules": {
+        "min_gpa": null,
+        "eligible_schools": [],
+        "eligible_majors": []
+      }
+    },
+    {
+      "name": "TJX Scholarship Program 2026-2027",
+      "award_amount": 10000,
+      "deadline": "2026-11-16",
+      "min_gpa": null,
+      "allowed_class_years": "freshman,sophomore,junior,senior",
+      "eligibility_rules": {
+        "min_gpa": null,
+        "eligible_schools": [],
+        "eligible_majors": []
+      }
+    },
+    {
+      "name": "UNCF Women in STEM Scholarship Program 2026-2027",
+      "award_amount": 5000,
+      "deadline": "2026-11-17",
+      "min_gpa": null,
+      "allowed_class_years": "freshman,sophomore,junior,senior",
+      "eligibility_rules": {
+        "min_gpa": null,
+        "eligible_schools": [],
+        "eligible_majors": []
+      }
+    },
+    {
+      "name": "Point Foundation Flagship Scholarship 2027",
+      "award_amount": 15000,
+      "deadline": "2026-11-19",
+      "min_gpa": 3.3,
+      "allowed_class_years": "freshman,sophomore,junior,senior",
+      "eligibility_rules": {
+        "min_gpa": 3.3,
+        "eligible_schools": [],
+        "eligible_majors": []
+      }
+    },
+    {
+      "name": "Russell Scholars Program",
+      "award_amount": 5650,
+      "deadline": "2026-11-20",
+      "min_gpa": 3.5,
+      "allowed_class_years": "sophomore",
+      "eligibility_rules": {
+        "min_gpa": 3.5,
+        "eligible_schools": [],
+        "eligible_majors": []
+      }
+    },
+    {
+      "name": "GBES Sustainability Scholarship for Rising College Seniors",
+      "award_amount": 2500,
+      "deadline": "2026-11-20",
+      "min_gpa": 3,
+      "allowed_class_years": "junior",
+      "eligibility_rules": {
+        "min_gpa": 3,
+        "eligible_schools": [],
+        "eligible_majors": []
+      }
+    },
+    {
+      "name": "Eunice Walker Johnson Scholarship 2026-2027",
+      "award_amount": 5000,
+      "deadline": "2026-11-23",
+      "min_gpa": null,
+      "allowed_class_years": "freshman,sophomore,junior,senior",
+      "eligibility_rules": {
+        "min_gpa": null,
+        "eligible_schools": [],
+        "eligible_majors": []
+      }
+    },
+    {
+      "name": "Barbara Lotze Scholarship for Future Physics Teachers",
+      "award_amount": 3000,
+      "deadline": "2026-12-01",
+      "min_gpa": null,
+      "allowed_class_years": "freshman,sophomore,junior,senior",
+      "eligibility_rules": {
+        "min_gpa": null,
+        "eligible_schools": [],
+        "eligible_majors": []
+      }
+    },
+    {
+      "name": "WTS Strategic Partner Scholarships 2027",
+      "award_amount": 5000,
+      "deadline": "2026-12-11",
+      "min_gpa": 3,
+      "allowed_class_years": "freshman,sophomore,junior,senior",
+      "eligibility_rules": {
+        "min_gpa": 3,
+        "eligible_schools": [],
+        "eligible_majors": []
+      }
+    },
+    {
+      "name": "SAA Historically Underrecognized Student Archaeology Scholarship (HUSAS) 2027",
+      "award_amount": 3000,
+      "deadline": "2026-12-14",
+      "min_gpa": null,
+      "allowed_class_years": "freshman,sophomore,junior,senior",
+      "eligibility_rules": {
+        "min_gpa": null,
+        "eligible_schools": [],
+        "eligible_majors": []
+      }
+    },
+    {
+      "name": "GFOA Clark Burrus Public Service Academic Scholarship 2027",
+      "award_amount": 10000,
+      "deadline": "2026-12-18",
+      "min_gpa": null,
+      "allowed_class_years": "junior,senior",
+      "eligibility_rules": {
+        "min_gpa": null,
+        "eligible_schools": [],
+        "eligible_majors": []
+      }
+    },
+    {
+      "name": "GFOA Frank L. Greathouse Government Accounting Scholarship 2027",
+      "award_amount": 10000,
+      "deadline": "2026-12-18",
+      "min_gpa": null,
+      "allowed_class_years": "junior,senior",
+      "eligibility_rules": {
+        "min_gpa": null,
+        "eligible_schools": [],
+        "eligible_majors": []
+      }
+    },
+    {
+      "name": "RevPart STEM Scholarship 2027",
+      "award_amount": 2500,
+      "deadline": "2026-12-31",
+      "min_gpa": null,
+      "allowed_class_years": "freshman,sophomore,junior,senior",
+      "eligibility_rules": {
+        "min_gpa": null,
+        "eligible_schools": [],
+        "eligible_majors": []
+      }
+    },
+    {
+      "name": "Applegate-Jackson-Parks Future Teacher Scholarship",
+      "award_amount": 1000,
+      "deadline": "2026-12-31",
+      "min_gpa": null,
+      "allowed_class_years": "freshman,sophomore,junior,senior",
+      "eligibility_rules": {
+        "min_gpa": null,
+        "eligible_schools": [],
+        "eligible_majors": []
+      }
+    },
+    {
+      "name": "DOE Computational Science Graduate Fellowship (CSGF) 2027-2028",
+      "award_amount": 45000,
+      "deadline": "2027-01-07",
+      "min_gpa": null,
+      "allowed_class_years": "senior",
+      "eligibility_rules": {
+        "min_gpa": null,
+        "eligible_schools": [],
+        "eligible_majors": []
+      }
+    },
+    {
+      "name": "GCA Spoldi-Stewart Agriculture Scholarship 2027",
+      "award_amount": 5000,
+      "deadline": "2027-01-15",
+      "min_gpa": null,
+      "allowed_class_years": "freshman,sophomore,junior,senior",
+      "eligibility_rules": {
+        "min_gpa": null,
+        "eligible_schools": [],
+        "eligible_majors": []
+      }
+    },
+    {
+      "name": "GCA Keller Scholarship in Conservation Horticulture 2027",
+      "award_amount": 5000,
+      "deadline": "2027-01-15",
+      "min_gpa": null,
+      "allowed_class_years": "sophomore,junior,senior",
+      "eligibility_rules": {
+        "min_gpa": null,
+        "eligible_schools": [],
+        "eligible_majors": []
+      }
+    },
+    {
+      "name": "Spencer Educational Foundation Undergraduate Scholarship 2027",
+      "award_amount": 10000,
+      "deadline": "2027-01-15",
+      "min_gpa": null,
+      "allowed_class_years": "freshman,sophomore,junior,senior",
+      "eligibility_rules": {
+        "min_gpa": null,
+        "eligible_schools": [],
+        "eligible_majors": []
+      }
+    },
+    {
+      "name": "Elie Wiesel Prize in Ethics Essay Contest 2027",
+      "award_amount": 10000,
+      "deadline": "2027-01-20",
+      "min_gpa": null,
+      "allowed_class_years": "freshman,sophomore,junior,senior",
+      "eligibility_rules": {
+        "min_gpa": null,
+        "eligible_schools": [],
+        "eligible_majors": []
+      }
+    },
+    {
+      "name": "Boren Scholarship 2027-2028",
+      "award_amount": 25000,
+      "deadline": "2027-01-27",
+      "min_gpa": null,
+      "allowed_class_years": "freshman,sophomore,junior,senior",
+      "eligibility_rules": {
+        "min_gpa": null,
+        "eligible_schools": [],
+        "eligible_majors": []
+      }
+    },
+    {
+      "name": "NOAA Ernest F. Hollings Undergraduate Scholarship",
+      "award_amount": 9500,
+      "deadline": "2027-01-31",
+      "min_gpa": null,
+      "allowed_class_years": null,
+      "eligibility_rules": {
+        "min_gpa": null,
+        "eligible_schools": [],
+        "eligible_majors": []
+      }
+    },
+    {
+      "name": "AIAA Foundation Undergraduate Scholarships 2027",
+      "award_amount": 10000,
+      "deadline": "2027-01-31",
+      "min_gpa": null,
+      "allowed_class_years": "sophomore,junior,senior",
+      "eligibility_rules": {
+        "min_gpa": null,
+        "eligible_schools": [],
+        "eligible_majors": []
+      }
+    },
+    {
+      "name": "SME Education Foundation Scholarships 2027-2028",
+      "award_amount": 20000,
+      "deadline": "2027-02-01",
+      "min_gpa": null,
+      "allowed_class_years": "freshman,sophomore,junior,senior",
+      "eligibility_rules": {
+        "min_gpa": null,
+        "eligible_schools": [],
+        "eligible_majors": []
+      }
+    },
+    {
+      "name": "ACFE Ritchie-Jennings Memorial Scholarship 2027-2028",
+      "award_amount": 10000,
+      "deadline": "2027-02-01",
+      "min_gpa": null,
+      "allowed_class_years": "freshman,sophomore,junior",
+      "eligibility_rules": {
+        "min_gpa": null,
+        "eligible_schools": [],
+        "eligible_majors": []
+      }
+    },
+    {
+      "name": "GCA Zeller Summer Scholarship in Medicinal Botany 2027",
+      "award_amount": 3000,
+      "deadline": "2027-02-01",
+      "min_gpa": null,
+      "allowed_class_years": "freshman,sophomore,junior,senior",
+      "eligibility_rules": {
+        "min_gpa": null,
+        "eligible_schools": [],
+        "eligible_majors": []
+      }
+    },
+    {
+      "name": "Harry S. Truman Scholarship 2027",
+      "award_amount": 30000,
+      "deadline": "2027-02-02",
+      "min_gpa": null,
+      "allowed_class_years": "junior",
+      "eligibility_rules": {
+        "min_gpa": null,
+        "eligible_schools": [],
+        "eligible_majors": []
+      }
+    },
+    {
+      "name": "ZNEF HBCU Scholarship",
+      "award_amount": 7000,
+      "deadline": "2027-02-04",
+      "min_gpa": 3,
+      "allowed_class_years": "freshman,sophomore,junior,senior",
+      "eligibility_rules": {
+        "min_gpa": 3,
+        "eligible_schools": [],
+        "eligible_majors": []
+      }
+    },
+    {
+      "name": "ZNEF Magdalene Barber Fennell Endowment Scholarship",
+      "award_amount": 5000,
+      "deadline": "2027-02-04",
+      "min_gpa": 2.8,
+      "allowed_class_years": "freshman,sophomore,junior,senior",
+      "eligibility_rules": {
+        "min_gpa": 2.8,
+        "eligible_schools": [],
+        "eligible_majors": []
+      }
+    },
+    {
+      "name": "ZNEF Lullelia W. Harrison Counseling Scholarship",
+      "award_amount": 7000,
+      "deadline": "2027-02-04",
+      "min_gpa": 3,
+      "allowed_class_years": "freshman,sophomore,junior,senior",
+      "eligibility_rules": {
+        "min_gpa": 3,
+        "eligible_schools": [],
+        "eligible_majors": []
+      }
+    },
+    {
+      "name": "ZNEF General Undergraduate Scholarship",
+      "award_amount": 7000,
+      "deadline": "2027-02-04",
+      "min_gpa": null,
+      "allowed_class_years": "freshman,sophomore,junior,senior",
+      "eligibility_rules": {
+        "min_gpa": null,
+        "eligible_schools": [],
+        "eligible_majors": []
+      }
+    },
+    {
+      "name": "ZNEF Isabel M. Herson Scholarship in Education",
+      "award_amount": 7000,
+      "deadline": "2027-02-04",
+      "min_gpa": null,
+      "allowed_class_years": "freshman,sophomore,junior,senior",
+      "eligibility_rules": {
+        "min_gpa": null,
+        "eligible_schools": [],
+        "eligible_majors": []
+      }
+    },
+    {
+      "name": "GCA Awards for Summer Environmental Studies 2027",
+      "award_amount": 3000,
+      "deadline": "2027-02-05",
+      "min_gpa": null,
+      "allowed_class_years": "freshman,sophomore,junior",
+      "eligibility_rules": {
+        "min_gpa": null,
+        "eligible_schools": [],
+        "eligible_majors": []
+      }
+    },
+    {
+      "name": "Udall Undergraduate Scholarship 2027",
+      "award_amount": 7000,
+      "deadline": "2027-03-04",
+      "min_gpa": null,
+      "allowed_class_years": "sophomore,junior",
+      "eligibility_rules": {
+        "min_gpa": null,
+        "eligible_schools": [],
+        "eligible_majors": []
+      }
+    },
+    {
+      "name": "IABA Scholarship 2027-2028",
+      "award_amount": 5000,
+      "deadline": "2027-03-31",
+      "min_gpa": 3,
+      "allowed_class_years": "freshman,sophomore,junior,senior",
+      "eligibility_rules": {
+        "min_gpa": 3,
+        "eligible_schools": [],
+        "eligible_majors": []
+      }
+    },
+    {
+      "name": "Shape Plus Fitness Scholarship",
+      "award_amount": 1500,
+      "deadline": "2027-08-01",
+      "min_gpa": null,
+      "allowed_class_years": null,
+      "eligibility_rules": {
+        "min_gpa": null,
+        "eligible_schools": [],
+        "eligible_majors": [
+          "Biology",
+          "Psychology",
+          "Nursing",
+          "Health Sciences",
+          "Behavioral Sciences"
+        ]
+      }
+    }
+  ]
+}
