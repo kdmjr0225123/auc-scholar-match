@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import '@/styles/elevaid.css';
 import { GraduationCap, Calendar, ExternalLink, ChevronDown, ChevronUp, ChevronRight, Star, User, Check, Undo2, Loader2, CheckCircle2, Download, Sparkles } from 'lucide-react';
 import { getSchoolTheme } from '@/lib/schoolTheme';
+import { checkEligibility } from '@/lib/eligibility';
 
 interface MatchedScholarship extends Scholarship {
   matchPercentage: number;
@@ -145,60 +146,26 @@ export default function Dashboard() {
     }
   };
 
+  // Eligibility lives in src/lib/eligibility.ts (mirrored server-side in
+  // supabase/functions/_shared/eligibility.ts). Every stated criterion is a
+  // hard exclude; matchPercentage ranks how specifically a scholarship
+  // targets this student (70 = open to everyone, +10 per criterion met).
   const calculateMatches = (profile: StudentProfile, scholarships: any[]): MatchedScholarship[] => {
     return scholarships.map(scholarship => {
-      const rules = scholarship.eligibility_rules;
-      if (!rules) return null;
-      const matchReasons: string[] = [];
-      const failReasons: string[] = [];
-      let totalCriteria = 0;
-      let metCriteria = 0;
-
-      totalCriteria++;
-      const schoolMatch = !rules.eligible_schools || rules.eligible_schools.length === 0 || rules.eligible_schools.includes(profile.school);
-      if (!schoolMatch) return null;
-      metCriteria++;
-      matchReasons.push(`School: ${formatSchool(profile.school)} is eligible`);
-
-      totalCriteria++;
-      const yearInRange =
-        (!rules.graduation_year_min || profile.graduation_year >= rules.graduation_year_min) &&
-        (!rules.graduation_year_max || profile.graduation_year <= rules.graduation_year_max);
-      if (!yearInRange) return null;
-      metCriteria++;
-      if (rules.graduation_year_min && rules.graduation_year_max) {
-        matchReasons.push(`Graduation Year: ${profile.graduation_year} is within ${rules.graduation_year_min}–${rules.graduation_year_max}`);
-      } else {
-        matchReasons.push(`Graduation Year: ${profile.graduation_year} (no restriction)`);
-      }
-
-      if (rules.min_gpa || rules.max_gpa) {
-        totalCriteria++;
-        const gpaMatch = (!rules.min_gpa || profile.gpa >= rules.min_gpa) && (!rules.max_gpa || profile.gpa <= rules.max_gpa);
-        if (gpaMatch) {
-          metCriteria++;
-          if (rules.min_gpa) matchReasons.push(`GPA: ${profile.gpa.toFixed(1)} ≥ ${rules.min_gpa.toFixed(1)} minimum`);
-        } else {
-          if (rules.min_gpa && profile.gpa < rules.min_gpa) failReasons.push(`GPA: ${profile.gpa.toFixed(1)} below ${rules.min_gpa.toFixed(1)} minimum`);
-        }
-      }
-
-      if (rules.eligible_majors?.length > 0) {
-        totalCriteria++;
-        const majorMatch = rules.eligible_majors.includes(profile.major);
-        if (majorMatch) { metCriteria++; matchReasons.push(`Major: ${profile.major} is eligible`); }
-        else failReasons.push(`Major: ${profile.major} not in eligible list`);
-      }
-
+      const rules = Array.isArray(scholarship.eligibility_rules)
+        ? scholarship.eligibility_rules[0] ?? null
+        : scholarship.eligibility_rules;
+      const result = checkEligibility(profile, rules, scholarship);
+      if (!result.eligible) return null;
       return {
         ...scholarship,
-        matchPercentage: Math.round((metCriteria / totalCriteria) * 100),
-        matchReasons: [...matchReasons.map(r => `pass:${r}`), ...failReasons.map(r => `fail:${r}`)],
+        matchPercentage: result.score,
+        matchReasons: result.pass.map(r => `pass:${r}`),
         eligibilityRules: rules,
       } as MatchedScholarship;
     })
     .filter((s): s is MatchedScholarship => s !== null)
-    .sort((a, b) => b.matchPercentage - a.matchPercentage);
+    .sort((a, b) => b.matchPercentage - a.matchPercentage || Number(b.award_amount ?? 0) - Number(a.award_amount ?? 0));
   };
 
   const handleMarkApplied = async (scholarship: MatchedScholarship) => {
