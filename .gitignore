@@ -30,3 +30,6 @@ apply-*.ps1
 .env
 .env.local
 .env.*.local
+
+# Local AI/agent working files: never commit
+Claude outputs/
